@@ -79,8 +79,13 @@ func NewAppModel() (*AppModel, error) {
 	}
 
 	// Initialize screen models
-	app.fileSelector = NewFileSelectModel(databases)
-	app.passwordModel = NewPasswordModel()
+	unlockDatabase := func(database types.Database, password string) tea.Cmd {
+		return UnlockDatabase(
+			app.dbManager, app.keyringManager, database, password,
+		)
+	}
+	app.fileSelector = NewFileSelectModel(databases, unlockDatabase)
+	app.passwordModel = NewPasswordModel(unlockDatabase)
 	app.searchModel = NewSearchModel()
 	app.searchModel.SetClipboardManager(clipboardMgr)
 	app.detailsModel = NewDetailsModel()
@@ -98,9 +103,7 @@ func (m *AppModel) Init() tea.Cmd {
 			if db.Path == m.databases.LastUsed {
 				// Found the last used database, try to unlock it automatically
 				selectedDB := &m.databases.Databases[i]
-				return func() tea.Msg {
-					return TryKeyringUnlockMsg{Database: selectedDB}
-				}
+				return UnlockDatabase(m.dbManager, m.keyringManager, *selectedDB, "")
 			}
 		}
 	}
@@ -126,45 +129,48 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.configMgr.SaveDatabaseList(m.databases)
 		}
 		return m, nil
-	case TryKeyringUnlockMsg:
-		return m.handleKeyringUnlock(msg)
-	case UnlockDatabaseMsg:
-		return m.handleDatabaseUnlock(msg)
-	case DatabaseUnlockResultMsg:
-		// Forward to password screen
-		if m.screen == PasswordInputScreen && m.passwordModel != nil {
+	case DatabaseUnlocked:
+		return m, func() tea.Msg {
+			return SwitchScreenMsg{
+				Screen:   MainSearchScreen,
+				Database: &msg.Database,
+				Entries:  msg.Entries,
+			}
+		}
+	case DatabaseUnlockFailed:
+		if m.screen == PasswordInputScreen {
 			var cmd tea.Cmd
 			m.passwordModel, cmd = m.passwordModel.Update(msg)
 			return m, cmd
+		} else {
+			return m, func() tea.Msg {
+				return SwitchScreenMsg{
+					Screen:   PasswordInputScreen,
+					Database: &msg.Database,
+					Entries:  nil,
+				}
+			}
 		}
 	}
 
 	// Delegate to current screen
 	switch m.screen {
 	case FileSelectionScreen:
-		if m.fileSelector != nil {
-			var cmd tea.Cmd
-			m.fileSelector, cmd = m.fileSelector.Update(msg)
-			return m, cmd
-		}
+		var cmd tea.Cmd
+		m.fileSelector, cmd = m.fileSelector.Update(msg)
+		return m, cmd
 	case PasswordInputScreen:
-		if m.passwordModel != nil {
-			var cmd tea.Cmd
-			m.passwordModel, cmd = m.passwordModel.Update(msg)
-			return m, cmd
-		}
+		var cmd tea.Cmd
+		m.passwordModel, cmd = m.passwordModel.Update(msg)
+		return m, cmd
 	case MainSearchScreen:
-		if m.searchModel != nil {
-			var cmd tea.Cmd
-			m.searchModel, cmd = m.searchModel.Update(msg)
-			return m, cmd
-		}
+		var cmd tea.Cmd
+		m.searchModel, cmd = m.searchModel.Update(msg)
+		return m, cmd
 	case EntryDetailsScreen:
-		if m.detailsModel != nil {
-			var cmd tea.Cmd
-			m.detailsModel, cmd = m.detailsModel.Update(msg)
-			return m, cmd
-		}
+		var cmd tea.Cmd
+		m.detailsModel, cmd = m.detailsModel.Update(msg)
+		return m, cmd
 	}
 
 	return m, nil
@@ -245,92 +251,11 @@ func (m *AppModel) switchScreen(msg SwitchScreenMsg) (*AppModel, tea.Cmd) {
 	return m, nil
 }
 
+// TODO: Remove
 // SwitchScreenMsg is sent to switch between screens
 type SwitchScreenMsg struct {
 	Screen   Screen
 	Database *types.Database
 	Entry    *types.Entry
 	Entries  []types.Entry
-}
-
-// handleDatabaseUnlock attempts to unlock a database
-func (m *AppModel) handleDatabaseUnlock(msg UnlockDatabaseMsg) (*AppModel, tea.Cmd) {
-	password := msg.Password
-
-	// If no password provided, try keyring first
-	if password == "" && m.keyringManager != nil && msg.Database != nil {
-		if storedPassword, err := m.keyringManager.Retrieve(msg.Database.Path); err == nil {
-			password = storedPassword
-		}
-	}
-
-	// Attempt to unlock the database
-	return m, tea.Cmd(func() tea.Msg {
-		if m.dbManager == nil {
-			return DatabaseUnlockResultMsg{
-				Success: false,
-				Error:   "Database manager not initialized",
-			}
-		}
-
-		err := m.dbManager.Open(msg.Database.Path, password)
-		if err != nil {
-			return DatabaseUnlockResultMsg{
-				Success: false,
-				Error:   err.Error(),
-			}
-		}
-
-		// Get entries from the database
-		entries, err := m.dbManager.GetEntries()
-		if err != nil {
-			return DatabaseUnlockResultMsg{
-				Success: false,
-				Error:   "Failed to read entries: " + err.Error(),
-			}
-		}
-
-		// Store password in keyring for future use
-		if m.keyringManager != nil && msg.Database != nil {
-			m.keyringManager.Store(msg.Database.Path, password)
-		}
-
-		return DatabaseUnlockResultMsg{
-			Success: true,
-			Entries: entries,
-		}
-	})
-}
-
-// handleKeyringUnlock attempts to unlock database using keyring, falls back to password prompt
-func (m *AppModel) handleKeyringUnlock(msg TryKeyringUnlockMsg) (*AppModel, tea.Cmd) {
-	if m.keyringManager == nil || msg.Database == nil {
-		// No keyring or database, go to password screen
-		return m, func() tea.Msg {
-			return SwitchScreenMsg{
-				Screen:   PasswordInputScreen,
-				Database: msg.Database,
-			}
-		}
-	}
-
-	// Try to get stored password
-	storedPassword, err := m.keyringManager.Retrieve(msg.Database.Path)
-	if err != nil {
-		// No stored password, go to password screen
-		return m, func() tea.Msg {
-			return SwitchScreenMsg{
-				Screen:   PasswordInputScreen,
-				Database: msg.Database,
-			}
-		}
-	}
-
-	// Try to unlock with stored password
-	return m, func() tea.Msg {
-		return UnlockDatabaseMsg{
-			Database: msg.Database,
-			Password: storedPassword,
-		}
-	}
 }

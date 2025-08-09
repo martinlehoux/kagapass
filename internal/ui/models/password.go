@@ -1,6 +1,7 @@
 package models
 
 import (
+	"log"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -10,21 +11,21 @@ import (
 
 // PasswordModel handles the password input screen
 type PasswordModel struct {
+	// Commands
+	unlockDatabase func(database types.Database, password string) tea.Cmd
+
 	database     *types.Database
 	password     string
 	errorMessage string
 	width        int
 	height       int
-	attempts     int
-	maxAttempts  int
 }
 
 // NewPasswordModel creates a new password input model
-func NewPasswordModel() *PasswordModel {
+func NewPasswordModel(unlockDatabase func(database types.Database, password string) tea.Cmd) *PasswordModel {
 	return &PasswordModel{
-		password:    "",
-		attempts:    0,
-		maxAttempts: 3,
+		unlockDatabase: unlockDatabase,
+		password:       "",
 	}
 }
 
@@ -33,7 +34,6 @@ func (m *PasswordModel) SetDatabase(db *types.Database) {
 	m.database = db
 	m.password = ""
 	m.errorMessage = ""
-	m.attempts = 0
 }
 
 // Update implements tea.Model
@@ -46,16 +46,9 @@ func (m *PasswordModel) Update(msg tea.Msg) (*PasswordModel, tea.Cmd) {
 		switch msg.String() {
 		case "enter":
 			if m.password != "" {
-				// Try to unlock the database
-				return m, func() tea.Msg {
-					return UnlockDatabaseMsg{
-						Database: m.database,
-						Password: m.password,
-					}
-				}
+				return m, m.unlockDatabase(*m.database, m.password)
 			}
 		case "esc":
-			// Return to file selection
 			return m, func() tea.Msg {
 				return SwitchScreenMsg{
 					Screen: FileSelectionScreen,
@@ -73,31 +66,8 @@ func (m *PasswordModel) Update(msg tea.Msg) (*PasswordModel, tea.Cmd) {
 				m.password += msg.String()
 			}
 		}
-	case DatabaseUnlockResultMsg:
-		if msg.Success {
-			// Success! Switch to search screen
-			return m, func() tea.Msg {
-				return SwitchScreenMsg{
-					Screen:   MainSearchScreen,
-					Database: m.database,
-					Entries:  msg.Entries,
-				}
-			}
-		} else {
-			// Failed to unlock
-			m.attempts++
-			m.password = ""
-			m.errorMessage = msg.Error
-
-			if m.attempts >= m.maxAttempts {
-				// Too many attempts, return to file selection
-				return m, func() tea.Msg {
-					return SwitchScreenMsg{
-						Screen: FileSelectionScreen,
-					}
-				}
-			}
-		}
+	case DatabaseUnlockFailed:
+		log.Printf("Failed to unlock database: %s", msg.Error)
 	}
 	return m, nil
 }
@@ -132,14 +102,6 @@ func (m *PasswordModel) View() string {
 		b.WriteString(errorStyle.Render("Error: "+m.errorMessage) + "\n\n")
 	}
 
-	// Show attempts remaining
-	if m.attempts > 0 {
-		attemptsLeft := m.maxAttempts - m.attempts
-		warningStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD23F"))
-		b.WriteString(warningStyle.Render("Incorrect password. Attempts remaining: ") +
-			warningStyle.Render(string(rune('0'+attemptsLeft))) + "\n\n")
-	}
-
 	// Password input
 	b.WriteString("Master Password:\n")
 
@@ -164,17 +126,4 @@ func (m *PasswordModel) View() string {
 		Render(footer))
 
 	return b.String()
-}
-
-// UnlockDatabaseMsg is sent to attempt database unlocking
-type UnlockDatabaseMsg struct {
-	Database *types.Database
-	Password string
-}
-
-// DatabaseUnlockResultMsg is sent with the result of database unlocking
-type DatabaseUnlockResultMsg struct {
-	Success bool
-	Error   string
-	Entries []types.Entry
 }

@@ -16,6 +16,9 @@ import (
 
 // FileSelectModel handles the file selection screen
 type FileSelectModel struct {
+	// Commands
+	unlockDatabase func(database types.Database, password string) tea.Cmd
+
 	databases     types.DatabaseList
 	cursor        int
 	databaseInput textinput.Model
@@ -23,12 +26,13 @@ type FileSelectModel struct {
 }
 
 // NewFileSelectModel creates a new file selection model
-func NewFileSelectModel(databases types.DatabaseList) *FileSelectModel {
+func NewFileSelectModel(databases types.DatabaseList, unlockDatabase func(database types.Database, password string) tea.Cmd) *FileSelectModel {
 	return &FileSelectModel{
-		databases:     databases,
-		databaseInput: textinput.New(),
-		cursor:        0,
-		statusMessage: "",
+		unlockDatabase: unlockDatabase,
+		databases:      databases,
+		databaseInput:  textinput.New(),
+		cursor:         0,
+		statusMessage:  "",
 	}
 }
 
@@ -73,11 +77,7 @@ func (m *FileSelectModel) Update(msg tea.Msg) (*FileSelectModel, tea.Cmd) {
 				return m, cmd
 			case "enter":
 				if len(m.databases.Databases) > 0 && m.cursor < len(m.databases.Databases) {
-					selected := &m.databases.Databases[m.cursor]
-					// Try to unlock with keyring first
-					return m, func() tea.Msg {
-						return TryKeyringUnlockMsg{Database: selected}
-					}
+					return m, m.unlockDatabase(m.databases.Databases[m.cursor], "")
 				}
 			case "esc":
 				return m, tea.Quit
@@ -221,9 +221,4 @@ func (m *FileSelectModel) removeDatabase() (*FileSelectModel, tea.Cmd) {
 // UpdateDatabaseListMsg is sent when the database list is modified
 type UpdateDatabaseListMsg struct {
 	DatabaseList types.DatabaseList
-}
-
-// TryKeyringUnlockMsg is sent to attempt unlocking with stored keyring password
-type TryKeyringUnlockMsg struct {
-	Database *types.Database
 }

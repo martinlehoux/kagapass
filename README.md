@@ -126,7 +126,7 @@ The application follows a clean architecture pattern with separate layers for UI
   - Clean state management for multiple screens
   - Excellent keyboard handling and composable components
 
-#### KeePass Integration  
+#### KeePass Integration
 - **[gokeepasslib](https://github.com/tobischo/gokeepasslib)**: Pure Go KeePass library
   - Native KDBX v3/v4 format support
   - No external dependencies on KeePass binaries
@@ -254,6 +254,7 @@ The application follows a clean architecture pattern with separate layers for UI
 - Custom field display
 - Multi-database search
 - Backup verification
+- Tea Model reference vs value
 
 ## Resources
 
