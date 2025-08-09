@@ -62,7 +62,7 @@ KagaPass is a Go-based TUI application designed for quick access to KeePass data
 │    GitHub API Token     (Personal/Development/Tokens)       │
 │                                                              │
 │                                                              │
-│  [b] Copy User  [c] Copy Pass  [Enter] Details  [Esc] Files │
+│  [Ctrl+B] Copy User  [Ctrl+C] Copy Pass  [Enter] Details  [Esc] Files │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -84,7 +84,7 @@ KagaPass is a Go-based TUI application designed for quick access to KeePass data
 │  Modified: 2024-12-20 14:30:22                              │
 │  Created:  2024-01-15 09:15:45                              │
 │                                                              │
-│  [b] Copy User  [c] Copy Pass  [Esc] Back                   │
+│  [Ctrl+B] Copy User  [Ctrl+C] Copy Pass  [Esc] Back                   │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -100,23 +100,106 @@ KagaPass is a Go-based TUI application designed for quick access to KeePass data
 ### Main Search Interface
 - `Type`: Real-time fuzzy search
 - `↑/↓` or `j/k`: Navigate search results
-- `b`: Copy username to clipboard
-- `c`: Copy password to clipboard
+- `Ctrl+B`: Copy username to clipboard
+- `Ctrl+C`: Copy password to clipboard
 - `Enter`: View entry details
 - `Esc`: Return to file selection
-- `Ctrl+C`: Quit application
+- `Ctrl+Q`: Quit application
 - `Ctrl+L`: Clear search
 
 ### Entry Details View
-- `b`: Copy username to clipboard
-- `c`: Copy password to clipboard
+- `Ctrl+B`: Copy username to clipboard
+- `Ctrl+C`: Copy password to clipboard
 - `Esc`: Return to search
 - `↑/↓` or `j/k`: Scroll through long notes
+
+## Technical Strategy
+
+### Architecture Overview
+The application follows a clean architecture pattern with separate layers for UI, business logic, and data access. This ensures maintainability and testability while keeping the codebase simple and focused.
+
+### Core Libraries
+
+#### TUI Framework
+- **[Bubble Tea](https://github.com/charmbracelet/bubbletea)**: Elm-inspired TUI framework
+  - Event-driven architecture perfect for real-time search
+  - Clean state management for multiple screens
+  - Excellent keyboard handling and composable components
+
+#### KeePass Integration  
+- **[gokeepasslib](https://github.com/tobischo/gokeepasslib)**: Pure Go KeePass library
+  - Native KDBX v3/v4 format support
+  - No external dependencies on KeePass binaries
+  - Memory-safe handling of encrypted databases
+
+#### Fuzzy Search
+- **[fzf](https://github.com/junegunn/fzf) algorithm** or **[fuzzy](https://github.com/sahilm/fuzzy)**: Fast fuzzy matching
+  - Optimized for real-time search as-you-type
+  - Relevance scoring for better result ordering
+  - Case-insensitive matching with highlight support
+
+#### System Integration
+- **[keyring](https://github.com/99designs/keyring)**: Cross-platform keyring access
+  - Linux Secret Service integration
+  - Secure master password storage
+  - Session-based credential caching
+
+#### Clipboard Management
+- **[clipboard](https://github.com/atotto/clipboard)**: Cross-platform clipboard access
+  - Simple read/write operations
+  - Background cleanup goroutines
+  - Memory-safe password handling
+
+### Data Flow
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   File Selector │───▶│  Database Loader │───▶│  Search Engine  │
+│   (Bubble Tea)  │    │   (gokeepasslib) │    │     (fuzzy)     │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+                                │                        │
+                       ┌──────────────────┐    ┌─────────────────┐
+                       │ Keyring Storage  │    │ Clipboard Manager│
+                       │   (keyring)      │    │   (clipboard)    │
+                       └──────────────────┘    └─────────────────┘
+```
+
+### Performance Considerations
+
+#### Memory Management
+- Lazy loading of database entries
+- Entry filtering before fuzzy search
+- Periodic garbage collection for sensitive data
+- Zero-copy operations where possible
+
+#### Search Optimization
+- Pre-indexed entry titles for faster lookups
+- Debounced search input (100ms default)
+- Result limiting (50 entries max)
+- Background search worker goroutines
+
+#### Security Measures
+- Master passwords never written to disk
+- Sensitive data zeroed from memory after use
+- No logging of passwords or search terms
+- Secure random number generation for session tokens
+
+### Error Handling Strategy
+- Graceful degradation for missing keyring support
+- User-friendly error messages for database issues
+- Automatic retry logic for transient failures
+- Detailed logging for debugging (non-sensitive data only)
+
+### Testing Approach
+- Unit tests for core business logic
+- Integration tests with mock KeePass databases
+- UI component testing with Bubble Tea test utilities
+- Security testing for memory leaks and data exposure
 
 ## Technical Requirements
 
 ### Dependencies
-- Go 1.21+
+- Go 1.24+
 - Linux keyring support (libsecret)
 - KeePass database format support (KDBX)
 
