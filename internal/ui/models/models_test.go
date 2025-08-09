@@ -1,9 +1,12 @@
 package models
 
 import (
+	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/martinlehoux/kagapass/internal/types"
@@ -455,5 +458,139 @@ func TestAppModelEscKeyInDatabaseSelection(t *testing.T) {
 	// Model should be updated
 	if newModel == nil {
 		t.Error("Expected updated model, got nil")
+	}
+}
+
+func TestSessionPersistence(t *testing.T) {
+	// Create temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "kagapass-session-test-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Override home directory for testing
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", originalHome)
+
+	// Create a mock database list with last used
+	configDir := filepath.Join(tmpDir, ".config", "kagapass")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("Failed to create config dir: %v", err)
+	}
+
+	// Create databases.json with a last used database
+	dbList := types.DatabaseList{
+		Databases: []types.Database{
+			{
+				Name:         "test.kdbx",
+				Path:         "/path/to/test.kdbx",
+				LastAccessed: time.Now(),
+			},
+			{
+				Name:         "real.kdbx", 
+				Path:         "/path/to/real.kdbx",
+				LastAccessed: time.Now().Add(-1 * time.Hour),
+			},
+		},
+		LastUsed: "/path/to/test.kdbx", // Last used was the test database
+	}
+
+	data, err := json.MarshalIndent(dbList, "", "  ")
+	if err != nil {
+		t.Fatalf("Failed to marshal database list: %v", err)
+	}
+
+	dbPath := filepath.Join(configDir, "databases.json")
+	if err := os.WriteFile(dbPath, data, 0644); err != nil {
+		t.Fatalf("Failed to write databases.json: %v", err)
+	}
+
+	// Create app model - should load the database list
+	app, err := NewAppModel()
+	if err != nil {
+		t.Fatalf("Failed to create app model: %v", err)
+	}
+
+	// Initialize the app - should trigger automatic unlock attempt
+	cmd := app.Init()
+	if cmd == nil {
+		t.Error("Expected Init() to return a command to unlock last used database, got nil")
+	} else {
+		// Execute the command to see what message it returns
+		msg := cmd()
+		
+		// This should be TryKeyringUnlockMsg for the test.kdbx database
+		if unlockMsg, ok := msg.(TryKeyringUnlockMsg); ok {
+			if unlockMsg.Database == nil {
+				t.Error("Expected database in TryKeyringUnlockMsg")
+			} else if unlockMsg.Database.Path != "/path/to/test.kdbx" {
+				t.Errorf("Expected database path '/path/to/test.kdbx', got '%s'", unlockMsg.Database.Path)
+			}
+		} else {
+			t.Errorf("Expected TryKeyringUnlockMsg, got %T", msg)
+		}
+	}
+}
+
+func TestDatabaseUnlockFlow(t *testing.T) {
+	// Create temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "kagapass-unlock-test-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Override home directory for testing
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", originalHome)
+
+	// Create app model
+	app, err := NewAppModel()
+	if err != nil {
+		t.Fatalf("Failed to create app model: %v", err)
+	}
+
+	// Create a database entry (simulating a real KeePass file)
+	db := types.Database{
+		Name:         "real.kdbx",
+		Path:         "/nonexistent/path/real.kdbx",
+		LastAccessed: time.Now(),
+	}
+
+	// Step 1: Simulate TryKeyringUnlockMsg (what happens when you press Enter on a database)
+	tryUnlockMsg := TryKeyringUnlockMsg{Database: &db}
+	app1, cmd1 := app.Update(tryUnlockMsg)
+	
+	if cmd1 == nil {
+		t.Error("Expected command from TryKeyringUnlockMsg, got nil")
+		return
+	}
+	
+	// Execute the command
+	msg1 := cmd1()
+	
+	// Step 2: Handle the resulting message (should be SwitchScreenMsg to password screen)
+	app2, cmd2 := app1.Update(msg1)
+	
+	// Verify we switched to password input screen
+	view := app2.View()
+	if !strings.Contains(view, "Enter Master Password") {
+		t.Error("Expected to switch to password input screen")
+	}
+	if !strings.Contains(view, "real.kdbx") {
+		t.Error("Expected password screen to show database name")
+	}
+	
+	// The unlock flow is working correctly:
+	// 1. TryKeyringUnlockMsg received
+	// 2. No stored password found, switch to password screen
+	// 3. Password screen displayed correctly
+	
+	// Verify cmd2 is nil (no further commands after screen switch)
+	if cmd2 != nil {
+		t.Error("Expected no command after switching to password screen")
 	}
 }

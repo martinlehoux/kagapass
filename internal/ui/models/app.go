@@ -92,6 +92,19 @@ func NewAppModel() (*AppModel, error) {
 
 // Init implements tea.Model
 func (m *AppModel) Init() tea.Cmd {
+	// Check if we should automatically try to unlock the last used database
+	if m.databases.LastUsed != "" {
+		// Find the database that matches LastUsed path
+		for i, db := range m.databases.Databases {
+			if db.Path == m.databases.LastUsed {
+				// Found the last used database, try to unlock it automatically
+				selectedDB := &m.databases.Databases[i]
+				return func() tea.Msg {
+					return TryKeyringUnlockMsg{Database: selectedDB}
+				}
+			}
+		}
+	}
 	return nil
 }
 
@@ -220,6 +233,11 @@ func (m *AppModel) switchScreen(msg SwitchScreenMsg) (*AppModel, tea.Cmd) {
 			if m.searchModel != nil {
 				m.searchModel.SetEntries(m.entries)
 				m.searchModel.SetDatabaseName(msg.Database.Name)
+			}
+			// Update LastUsed and save to config
+			m.databases.LastUsed = msg.Database.Path
+			if m.configMgr != nil {
+				m.configMgr.SaveDatabaseList(m.databases)
 			}
 		}
 	case EntryDetailsScreen:
