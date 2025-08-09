@@ -7,12 +7,12 @@ import (
 
 func TestNew(t *testing.T) {
 	manager, err := New()
-	
+
 	// Keyring might not be available in test environment
 	if err != nil {
 		t.Skipf("Keyring not available in test environment: %v", err)
 	}
-	
+
 	if manager == nil {
 		t.Fatal("Expected non-nil manager when no error")
 	}
@@ -119,7 +119,7 @@ func TestListStored(t *testing.T) {
 	}
 
 	testPath := "/test/list/database.kdbx"
-	
+
 	// Store a test password
 	err = manager.Store(testPath, "test_password")
 	if err != nil {
@@ -160,7 +160,7 @@ func TestStoreEmptyPassword(t *testing.T) {
 	}
 
 	testPath := "/test/empty/database.kdbx"
-	
+
 	// Store empty password
 	err = manager.Store(testPath, "")
 	if err != nil {
@@ -213,11 +213,11 @@ func TestKeyPrefix(t *testing.T) {
 	// Test that the key prefix is applied correctly
 	testPath := "/some/path/database.kdbx"
 	expectedKey := keyPrefix + testPath
-	
+
 	if !strings.HasPrefix(expectedKey, keyPrefix) {
 		t.Error("Expected key to have proper prefix")
 	}
-	
+
 	if expectedKey == testPath {
 		t.Error("Expected key to be different from original path")
 	}
@@ -232,10 +232,10 @@ func TestMultipleOperations(t *testing.T) {
 	// Store multiple passwords
 	paths := []string{
 		"/test/multi/db1.kdbx",
-		"/test/multi/db2.kdbx", 
+		"/test/multi/db2.kdbx",
 		"/test/multi/db3.kdbx",
 	}
-	
+
 	passwords := []string{
 		"password1",
 		"password2",
@@ -264,7 +264,7 @@ func TestMultipleOperations(t *testing.T) {
 			t.Errorf("Failed to retrieve password %d: %v", i, err)
 		}
 		if retrieved != passwords[i] {
-			t.Errorf("Password %d mismatch: expected '%s', got '%s'", 
+			t.Errorf("Password %d mismatch: expected '%s', got '%s'",
 				i, passwords[i], retrieved)
 		}
 	}

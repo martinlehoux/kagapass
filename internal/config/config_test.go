@@ -61,17 +61,17 @@ func TestLoadConfigDefault(t *testing.T) {
 	// Check default values
 	expectedDefault := types.DefaultConfig()
 	if config.ClipboardClearSeconds != expectedDefault.ClipboardClearSeconds {
-		t.Errorf("Expected ClipboardClearSeconds %d, got %d", 
+		t.Errorf("Expected ClipboardClearSeconds %d, got %d",
 			expectedDefault.ClipboardClearSeconds, config.ClipboardClearSeconds)
 	}
 
 	if config.SearchDebounceMs != expectedDefault.SearchDebounceMs {
-		t.Errorf("Expected SearchDebounceMs %d, got %d", 
+		t.Errorf("Expected SearchDebounceMs %d, got %d",
 			expectedDefault.SearchDebounceMs, config.SearchDebounceMs)
 	}
 
 	if config.MaxSearchResults != expectedDefault.MaxSearchResults {
-		t.Errorf("Expected MaxSearchResults %d, got %d", 
+		t.Errorf("Expected MaxSearchResults %d, got %d",
 			expectedDefault.MaxSearchResults, config.MaxSearchResults)
 	}
 }
@@ -114,12 +114,12 @@ func TestSaveAndLoadConfig(t *testing.T) {
 
 	// Verify values
 	if loadedConfig.ClipboardClearSeconds != customConfig.ClipboardClearSeconds {
-		t.Errorf("Expected ClipboardClearSeconds %d, got %d", 
+		t.Errorf("Expected ClipboardClearSeconds %d, got %d",
 			customConfig.ClipboardClearSeconds, loadedConfig.ClipboardClearSeconds)
 	}
 
 	if loadedConfig.DefaultDatabasePath != customConfig.DefaultDatabasePath {
-		t.Errorf("Expected DefaultDatabasePath %s, got %s", 
+		t.Errorf("Expected DefaultDatabasePath %s, got %s",
 			customConfig.DefaultDatabasePath, loadedConfig.DefaultDatabasePath)
 	}
 }
@@ -198,12 +198,12 @@ func TestSaveAndLoadDatabaseList(t *testing.T) {
 	}
 
 	if loadedList.Databases[0].Name != testDB.Name {
-		t.Errorf("Expected database name %s, got %s", 
+		t.Errorf("Expected database name %s, got %s",
 			testDB.Name, loadedList.Databases[0].Name)
 	}
 
 	if loadedList.LastUsed != testDB.Path {
-		t.Errorf("Expected LastUsed %s, got %s", 
+		t.Errorf("Expected LastUsed %s, got %s",
 			testDB.Path, loadedList.LastUsed)
 	}
 }
@@ -239,7 +239,7 @@ func TestCorruptedConfigFile(t *testing.T) {
 	// Should still have some default values even on error
 	expectedDefault := types.DefaultConfig()
 	if config.ClipboardClearSeconds != expectedDefault.ClipboardClearSeconds {
-		t.Errorf("Expected default ClipboardClearSeconds %d, got %d", 
+		t.Errorf("Expected default ClipboardClearSeconds %d, got %d",
 			expectedDefault.ClipboardClearSeconds, config.ClipboardClearSeconds)
 	}
 }

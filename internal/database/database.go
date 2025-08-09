@@ -30,7 +30,7 @@ func (m *Manager) Open(filePath, masterPassword string) error {
 
 	db := gokeepasslib.NewDatabase()
 	db.Credentials = gokeepasslib.NewPasswordCredentials(masterPassword)
-	
+
 	err = gokeepasslib.NewDecoder(file).Decode(db)
 	if err != nil {
 		return fmt.Errorf("failed to decrypt database: %w", err)
@@ -51,12 +51,12 @@ func (m *Manager) GetEntries() ([]types.Entry, error) {
 	}
 
 	var entries []types.Entry
-	
+
 	// Start from the root group
 	if m.db.Content != nil && m.db.Content.Root != nil && len(m.db.Content.Root.Groups) > 0 {
 		m.collectEntriesFromGroup(&m.db.Content.Root.Groups[0], "", &entries)
 	}
-	
+
 	return entries, nil
 }
 
@@ -65,7 +65,7 @@ func (m *Manager) collectEntriesFromGroup(group *gokeepasslib.Group, groupPath s
 	if group == nil {
 		return
 	}
-	
+
 	// Process entries in current group
 	for _, entry := range group.Entries {
 		if entry.Values == nil {

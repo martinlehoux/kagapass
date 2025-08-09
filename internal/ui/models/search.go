@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/martinlehoux/kagapass/internal/clipboard"
 	"github.com/martinlehoux/kagapass/internal/types"
+	"github.com/martinlehoux/kagapass/internal/ui/style"
 	"github.com/sahilm/fuzzy"
 )
 
@@ -142,14 +143,7 @@ func (m *SearchModel) View() string {
 	if m.dbName != "" {
 		titleText += " - " + m.dbName
 	}
-	title := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("#FAFAFA")).
-		Background(lipgloss.Color("#7D56F4")).
-		Padding(0, 1).
-		Render(titleText)
-
-	b.WriteString(title + "\n\n")
+	b.WriteString(style.ViewTitle.Render(titleText) + "\n\n")
 
 	// Show status message if any
 	if m.statusMessage != "" {

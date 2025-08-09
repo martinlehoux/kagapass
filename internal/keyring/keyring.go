@@ -19,8 +19,8 @@ type Manager struct {
 // New creates a new keyring manager
 func New() (*Manager, error) {
 	config := keyring.Config{
-		ServiceName:          serviceName,
-		AllowedBackends:      []keyring.BackendType{keyring.SecretServiceBackend},
+		ServiceName:              serviceName,
+		AllowedBackends:          []keyring.BackendType{keyring.SecretServiceBackend},
 		KeychainTrustApplication: true,
 	}
 
@@ -35,11 +35,11 @@ func New() (*Manager, error) {
 // Store saves a master password for a database file
 func (m *Manager) Store(databasePath, masterPassword string) error {
 	key := keyPrefix + databasePath
-	
+
 	item := keyring.Item{
-		Key:  key,
-		Data: []byte(masterPassword),
-		Label: fmt.Sprintf("KagaPass - %s", databasePath),
+		Key:         key,
+		Data:        []byte(masterPassword),
+		Label:       fmt.Sprintf("KagaPass - %s", databasePath),
 		Description: "KeePass master password for KagaPass TUI",
 	}
 
@@ -49,7 +49,7 @@ func (m *Manager) Store(databasePath, masterPassword string) error {
 // Retrieve gets the master password for a database file
 func (m *Manager) Retrieve(databasePath string) (string, error) {
 	key := keyPrefix + databasePath
-	
+
 	item, err := m.ring.Get(key)
 	if err != nil {
 		return "", fmt.Errorf("password not found in keyring: %w", err)
