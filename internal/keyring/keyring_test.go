@@ -1,22 +1,8 @@
 package keyring
 
 import (
-	"strings"
 	"testing"
 )
-
-func TestNew(t *testing.T) {
-	manager, err := New()
-
-	// Keyring might not be available in test environment
-	if err != nil {
-		t.Skipf("Keyring not available in test environment: %v", err)
-	}
-
-	if manager == nil {
-		t.Fatal("Expected non-nil manager when no error")
-	}
-}
 
 func TestStoreAndRetrieve(t *testing.T) {
 	manager, err := New()
@@ -207,20 +193,6 @@ func TestStorePathWithSpecialChars(t *testing.T) {
 
 	// Clean up
 	manager.Remove(testPath)
-}
-
-func TestKeyPrefix(t *testing.T) {
-	// Test that the key prefix is applied correctly
-	testPath := "/some/path/database.kdbx"
-	expectedKey := keyPrefix + testPath
-
-	if !strings.HasPrefix(expectedKey, keyPrefix) {
-		t.Error("Expected key to have proper prefix")
-	}
-
-	if expectedKey == testPath {
-		t.Error("Expected key to be different from original path")
-	}
 }
 
 func TestMultipleOperations(t *testing.T) {

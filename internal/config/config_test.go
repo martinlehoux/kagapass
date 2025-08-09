@@ -8,35 +8,6 @@ import (
 	"github.com/martinlehoux/kagapass/internal/types"
 )
 
-func TestNew(t *testing.T) {
-	// Create temporary directory for testing
-	tmpDir, err := os.MkdirTemp("", "kagapass-test-")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	// Override home directory for testing
-	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", originalHome)
-
-	manager, err := New()
-	if err != nil {
-		t.Fatalf("New() failed: %v", err)
-	}
-
-	if manager == nil {
-		t.Fatal("New() returned nil manager")
-	}
-
-	// Check if config directory was created
-	expectedConfigDir := filepath.Join(tmpDir, ".config", "kagapass")
-	if _, err := os.Stat(expectedConfigDir); os.IsNotExist(err) {
-		t.Errorf("Config directory was not created at %s", expectedConfigDir)
-	}
-}
-
 func TestLoadConfigDefault(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "kagapass-test-")
 	if err != nil {

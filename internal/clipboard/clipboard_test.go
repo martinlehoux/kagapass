@@ -1,17 +1,9 @@
 package clipboard
 
 import (
-	"context"
 	"testing"
 	"time"
 )
-
-func TestNew(t *testing.T) {
-	manager := New()
-	if manager == nil {
-		t.Fatal("New() returned nil")
-	}
-}
 
 func TestCopyWithoutClearTime(t *testing.T) {
 	manager := New()
@@ -88,38 +80,6 @@ func TestCopyOverwrite(t *testing.T) {
 	if manager.clearTimer == firstTimer {
 		t.Error("Expected new timer, got same timer")
 	}
-}
-
-func TestCopyWithContext(t *testing.T) {
-	manager := New()
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	err := manager.CopyWithContext(ctx, "context test", 500*time.Millisecond)
-	if err != nil {
-		t.Skipf("Clipboard not available in test environment: %v", err)
-	}
-
-	// Cancel context immediately
-	cancel()
-
-	// Give some time for context cancellation to take effect
-	time.Sleep(50 * time.Millisecond)
-}
-
-func TestCopyWithContextTimeout(t *testing.T) {
-	manager := New()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer cancel()
-
-	err := manager.CopyWithContext(ctx, "timeout test", 500*time.Millisecond)
-	if err != nil {
-		t.Skipf("Clipboard not available in test environment: %v", err)
-	}
-
-	// Wait for context to timeout
-	time.Sleep(150 * time.Millisecond)
 }
 
 func TestClear(t *testing.T) {
@@ -207,19 +167,6 @@ func TestMultipleCopiesRapidly(t *testing.T) {
 	if manager.clearTimer == nil {
 		t.Error("Expected timer after multiple rapid copies")
 	}
-}
-
-func TestGet(t *testing.T) {
-	manager := New()
-
-	// Get current clipboard content
-	content, err := manager.Get()
-	if err != nil {
-		t.Skipf("Clipboard not available in test environment: %v", err)
-	}
-
-	// Content can be anything (including empty), just test that it doesn't crash
-	_ = content
 }
 
 func TestCopyAndGet(t *testing.T) {

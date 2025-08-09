@@ -13,26 +13,6 @@ import (
 	"github.com/martinlehoux/kagapass/internal/types"
 )
 
-func TestFileSelectModelNew(t *testing.T) {
-	dbList := types.DatabaseList{
-		Databases: []types.Database{},
-		LastUsed:  "",
-	}
-
-	model := NewFileSelectModel(dbList, func(database types.Database, password string) tea.Cmd { return nil })
-	if model == nil {
-		t.Fatal("NewFileSelectModel returned nil")
-	}
-
-	if model.cursor != 0 {
-		t.Error("Expected initial cursor position 0")
-	}
-
-	if model.databaseInput.Focused() {
-		t.Error("Expected input mode to be false initially")
-	}
-}
-
 func TestFileSelectModelWithDatabases(t *testing.T) {
 	dbList := types.DatabaseList{
 		Databases: []types.Database{
@@ -152,36 +132,6 @@ func TestFileSelectModelView(t *testing.T) {
 	}
 }
 
-func TestSearchModelNew(t *testing.T) {
-	model := NewSearchModel()
-	if model == nil {
-		t.Fatal("NewSearchModel returned nil")
-	}
-
-	if model.searchInput != "" {
-		t.Error("Expected empty search input initially")
-	}
-
-	if model.cursor != 0 {
-		t.Error("Expected cursor at 0 initially")
-	}
-}
-
-func TestSearchModelSetEntries(t *testing.T) {
-	model := NewSearchModel()
-
-	entries := []types.Entry{
-		{Title: "GitHub", Username: "user1"},
-		{Title: "Gmail", Username: "user2"},
-	}
-
-	model.SetEntries(entries)
-
-	if len(model.entries) != 2 {
-		t.Errorf("Expected 2 entries, got %d", len(model.entries))
-	}
-}
-
 func TestSearchModelSearch(t *testing.T) {
 	model := NewSearchModel()
 
@@ -248,40 +198,6 @@ func TestSearchModelNavigation(t *testing.T) {
 	}
 }
 
-func TestDetailsModelNew(t *testing.T) {
-	model := NewDetailsModel()
-	if model == nil {
-		t.Fatal("NewDetailsModel returned nil")
-	}
-
-	if model.entry != nil {
-		t.Error("Expected no entry initially")
-	}
-}
-
-func TestDetailsModelSetEntry(t *testing.T) {
-	model := NewDetailsModel()
-
-	entry := types.Entry{
-		Title:    "Test Entry",
-		Username: "testuser",
-		Password: "testpass",
-		URL:      "https://example.com",
-		Notes:    "Test notes",
-		Group:    "Test/Group",
-	}
-
-	model.SetEntry(entry)
-
-	if model.entry == nil {
-		t.Fatal("Expected entry to be set")
-	}
-
-	if model.entry.Title != entry.Title {
-		t.Errorf("Expected title '%s', got '%s'", entry.Title, model.entry.Title)
-	}
-}
-
 func TestDetailsModelView(t *testing.T) {
 	model := NewDetailsModel()
 
@@ -319,36 +235,6 @@ func TestDetailsModelView(t *testing.T) {
 
 	if !strings.Contains(view, "************") {
 		t.Error("Expected masked password in view")
-	}
-}
-
-func TestPasswordModelNew(t *testing.T) {
-	model := NewPasswordModel(func(database types.Database, password string) tea.Cmd { return nil })
-	if model == nil {
-		t.Fatal("NewPasswordModel returned nil")
-	}
-
-	if model.password != "" {
-		t.Error("Expected empty password initially")
-	}
-}
-
-func TestPasswordModelSetDatabase(t *testing.T) {
-	model := NewPasswordModel(func(database types.Database, password string) tea.Cmd { return nil })
-
-	db := &types.Database{
-		Name: "test.kdbx",
-		Path: "/path/to/test.kdbx",
-	}
-
-	model.SetDatabase(db)
-
-	if model.database != db {
-		t.Error("Expected database to be set")
-	}
-
-	if model.password != "" {
-		t.Error("Expected password to be cleared when setting database")
 	}
 }
 

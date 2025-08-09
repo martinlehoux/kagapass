@@ -34,60 +34,6 @@ KagaPass is a Go-based TUI application designed for quick access to KeePass data
 - **Session-based**: Database remains accessible throughout Linux session
 - **Secure Storage**: Master passwords stored using OS-level security
 
-## User Interface Specification
-
-### File Selection Screen
-```
-┌─ KagaPass - Select Database ─────────────────────────────────┐
-│                                                              │
-│  Select KeePass Database:                                    │
-│                                                              │
-│  ▶ personal.kdbx        (/home/user/passwords/personal.kdbx) │
-│    work.kdbx            (/home/user/passwords/work.kdbx)     │
-│    family.kdbx          (/home/user/passwords/family.kdbx)   │
-│                                                              │
-│  [Enter] Open  [Esc] Quit  [a] Add new file                 │
-└──────────────────────────────────────────────────────────────┘
-```
-
-### Main Search Interface
-```
-┌─ KagaPass - personal.kdbx ───────────────────────────────────┐
-│                                                              │
-│  Search: github_                                             │
-│  ────────────────────────────────────────────────────────── │
-│                                                              │
-│  ▶ GitHub Personal      (Personal/Development)              │
-│    GitHub Work          (Work/Development)                   │
-│    GitHub API Token     (Personal/Development/Tokens)       │
-│                                                              │
-│                                                              │
-│  [Ctrl+B] Copy User  [Ctrl+C] Copy Pass  [Enter] Details  [Esc] Files │
-└──────────────────────────────────────────────────────────────┘
-```
-
-### Entry Details View
-```
-┌─ Entry Details ──────────────────────────────────────────────┐
-│                                                              │
-│  Title:    GitHub Personal                                   │
-│  Username: kagamino                                          │
-│  Password: ************                                      │
-│  URL:      https://github.com                               │
-│  Group:    Personal/Development                              │
-│                                                              │
-│  Notes:                                                      │
-│  Recovery codes stored in separate entry.                   │
-│  Two-factor authentication enabled.                         │
-│  Last backup: 2024-12-15                                    │
-│                                                              │
-│  Modified: 2024-12-20 14:30:22                              │
-│  Created:  2024-01-15 09:15:45                              │
-│                                                              │
-│  [Ctrl+B] Copy User  [Ctrl+C] Copy Pass  [Esc] Back                   │
-└──────────────────────────────────────────────────────────────┘
-```
-
 ## Keyboard Shortcuts
 
 ### File Selection Screen
@@ -150,39 +96,9 @@ The application follows a clean architecture pattern with separate layers for UI
   - Background cleanup goroutines
   - Memory-safe password handling
 
-### Data Flow
-
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   File Selector │───▶│  Database Loader │───▶│  Search Engine  │
-│   (Bubble Tea)  │    │   (gokeepasslib) │    │     (fuzzy)     │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                                │                        │
-                       ┌──────────────────┐    ┌─────────────────┐
-                       │ Keyring Storage  │    │ Clipboard Manager│
-                       │   (keyring)      │    │   (clipboard)    │
-                       └──────────────────┘    └─────────────────┘
-```
-
-### Performance Considerations
-
-#### Memory Management
-- Lazy loading of database entries
-- Entry filtering before fuzzy search
-- Periodic garbage collection for sensitive data
-- Zero-copy operations where possible
-
-#### Search Optimization
-- Pre-indexed entry titles for faster lookups
-- Debounced search input (100ms default)
-- Result limiting (50 entries max)
-- Background search worker goroutines
-
-#### Security Measures
+### Security
 - Master passwords never written to disk
-- Sensitive data zeroed from memory after use
 - No logging of passwords or search terms
-- Secure random number generation for session tokens
 
 ### Error Handling Strategy
 - Graceful degradation for missing keyring support
@@ -212,13 +128,7 @@ The application follows a clean architecture pattern with separate layers for UI
 - Master passwords stored in OS keyring only
 - No password logging or caching to disk
 - Automatic clipboard clearing
-- Memory zeroing for sensitive data
 - Session timeout configurable (default: until logout)
-
-### Performance Targets
-- Database unlock: < 2 seconds
-- Search response: < 100ms for databases with 1000+ entries
-- Memory usage: < 50MB per open database
 
 ## Configuration
 
@@ -255,6 +165,9 @@ The application follows a clean architecture pattern with separate layers for UI
 - Multi-database search
 - Backup verification
 - Tea Model reference vs value
+- Database unlock: < 2 seconds
+- Search response: < 100ms for databases with 1000+ entries
+- Memory usage: < 50MB per open database
 
 ## Resources
 
