@@ -38,62 +38,65 @@ func (m *FileSelectModel) Update(msg tea.Msg) (*FileSelectModel, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "up", "k":
-			if !m.inputMode && m.cursor > 0 {
-				m.cursor--
-			}
-		case "down", "j":
-			if !m.inputMode && m.cursor < len(m.databases.Databases)-1 {
-				m.cursor++
-			}
-		case "a":
-			if !m.inputMode {
-				m.inputMode = true
-				m.inputText = ""
-				m.statusMessage = "Enter path to KeePass database (.kdbx file):"
-			}
-		case "d":
-			if !m.inputMode && len(m.databases.Databases) > 0 && m.cursor < len(m.databases.Databases) {
-				// Remove selected database
-				db := m.databases.Databases[m.cursor]
-				m.databases.Databases = append(m.databases.Databases[:m.cursor], m.databases.Databases[m.cursor+1:]...)
-				if m.cursor >= len(m.databases.Databases) && m.cursor > 0 {
-					m.cursor--
-				}
-				m.statusMessage = fmt.Sprintf("Removed database: %s", db.Name)
-				
-				return m, func() tea.Msg {
-					return UpdateDatabaseListMsg{DatabaseList: m.databases}
-				}
-			}
-		case "esc":
-			if m.inputMode {
+		// Handle input mode first - takes priority over navigation
+		if m.inputMode {
+			switch msg.String() {
+			case "esc":
 				m.inputMode = false
 				m.inputText = ""
 				m.statusMessage = ""
-			} else {
-				return m, tea.Quit
-			}
-		case "enter":
-			if m.inputMode {
+			case "enter":
 				// Process the input
 				return m.addDatabase()
-			} else if len(m.databases.Databases) > 0 && m.cursor < len(m.databases.Databases) {
-				selected := &m.databases.Databases[m.cursor]
-				// Try to unlock with keyring first
-				return m, func() tea.Msg {
-					return TryKeyringUnlockMsg{Database: selected}
+			case "backspace":
+				if len(m.inputText) > 0 {
+					m.inputText = m.inputText[:len(m.inputText)-1]
+				}
+			default:
+				// Handle regular typing in input mode
+				if len(msg.String()) == 1 {
+					m.inputText += msg.String()
 				}
 			}
-		case "backspace":
-			if m.inputMode && len(m.inputText) > 0 {
-				m.inputText = m.inputText[:len(m.inputText)-1]
-			}
-		default:
-			// Handle input mode typing
-			if m.inputMode && len(msg.String()) == 1 {
-				m.inputText += msg.String()
+		} else {
+			// Handle navigation mode
+			switch msg.String() {
+			case "up", "k":
+				if m.cursor > 0 {
+					m.cursor--
+				}
+			case "down", "j":
+				if m.cursor < len(m.databases.Databases)-1 {
+					m.cursor++
+				}
+			case "a":
+				m.inputMode = true
+				m.inputText = ""
+				m.statusMessage = "Enter path to KeePass database (.kdbx file):"
+			case "d":
+				if len(m.databases.Databases) > 0 && m.cursor < len(m.databases.Databases) {
+					// Remove selected database
+					db := m.databases.Databases[m.cursor]
+					m.databases.Databases = append(m.databases.Databases[:m.cursor], m.databases.Databases[m.cursor+1:]...)
+					if m.cursor >= len(m.databases.Databases) && m.cursor > 0 {
+						m.cursor--
+					}
+					m.statusMessage = fmt.Sprintf("Removed database: %s", db.Name)
+					
+					return m, func() tea.Msg {
+						return UpdateDatabaseListMsg{DatabaseList: m.databases}
+					}
+				}
+			case "enter":
+				if len(m.databases.Databases) > 0 && m.cursor < len(m.databases.Databases) {
+					selected := &m.databases.Databases[m.cursor]
+					// Try to unlock with keyring first
+					return m, func() tea.Msg {
+						return TryKeyringUnlockMsg{Database: selected}
+					}
+				}
+			case "esc":
+				return m, tea.Quit
 			}
 		}
 	}

@@ -170,11 +170,15 @@ func (m *SearchModel) View() string {
 
 	// Results
 	maxResults := 10
-	if len(m.filteredItems) == 0 {
+	if len(m.entries) == 0 {
+		b.WriteString("No entries in database.\n")
+		b.WriteString("Make sure the database was unlocked successfully.\n")
+	} else if len(m.filteredItems) == 0 {
 		if m.searchInput == "" {
-			b.WriteString("Start typing to search entries...\n")
+			totalEntries := len(m.entries)
+			b.WriteString(fmt.Sprintf("Database contains %d entries. Start typing to search...\n", totalEntries))
 		} else {
-			b.WriteString("No entries found.\n")
+			b.WriteString("No entries found matching your search.\n")
 		}
 	} else {
 		for i, match := range m.filteredItems {
@@ -189,13 +193,28 @@ func (m *SearchModel) View() string {
 
 			if match.Index < len(m.entries) {
 				entry := m.entries[match.Index]
-				line := fmt.Sprintf("  %s %s", cursor, entry.Title)
+				
+				// Format entry display
+				title := entry.Title
+				if title == "" {
+					title = "(No Title)"
+				}
+				
+				line := fmt.Sprintf("  %s %s", cursor, title)
+				
+				// Add group path if it exists
 				if entry.Group != "" {
-					line += fmt.Sprintf(" (%s)", entry.Group)
+					groupStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#626262"))
+					line += " " + groupStyle.Render(fmt.Sprintf("(%s)", entry.Group))
 				}
 
 				if m.cursor == i {
-					line = lipgloss.NewStyle().Foreground(lipgloss.Color("#7D56F4")).Render(line)
+					titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#7D56F4"))
+					line = fmt.Sprintf("  %s %s", cursor, titleStyle.Render(title))
+					if entry.Group != "" {
+						groupStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#9B9B9B"))
+						line += " " + groupStyle.Render(fmt.Sprintf("(%s)", entry.Group))
+					}
 				}
 
 				b.WriteString(line + "\n")

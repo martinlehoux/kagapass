@@ -52,16 +52,22 @@ func (m *Manager) GetEntries() ([]types.Entry, error) {
 
 	var entries []types.Entry
 	
-	// Recursively collect entries from all groups
-	m.collectEntries(m.db.Content.Root, "", &entries)
+	// Start from the root group
+	if m.db.Content != nil && m.db.Content.Root != nil && len(m.db.Content.Root.Groups) > 0 {
+		m.collectEntriesFromGroup(&m.db.Content.Root.Groups[0], "", &entries)
+	}
 	
 	return entries, nil
 }
 
-// collectEntries recursively collects entries from groups
-func (m *Manager) collectEntries(group *gokeepasslib.RootData, groupPath string, entries *[]types.Entry) {
+// collectEntriesFromGroup recursively collects entries from a group and its subgroups
+func (m *Manager) collectEntriesFromGroup(group *gokeepasslib.Group, groupPath string, entries *[]types.Entry) {
+	if group == nil {
+		return
+	}
+	
 	// Process entries in current group
-	for _, entry := range group.Groups[0].Entries {
+	for _, entry := range group.Entries {
 		if entry.Values == nil {
 			continue
 		}
@@ -98,7 +104,7 @@ func (m *Manager) collectEntries(group *gokeepasslib.RootData, groupPath string,
 	}
 
 	// Recursively process subgroups
-	for _, subGroup := range group.Groups[0].Groups {
+	for _, subGroup := range group.Groups {
 		subGroupPath := groupPath
 		if subGroup.Name != "" {
 			if subGroupPath != "" {
@@ -106,12 +112,7 @@ func (m *Manager) collectEntries(group *gokeepasslib.RootData, groupPath string,
 			}
 			subGroupPath += subGroup.Name
 		}
-
-		// Create a temporary RootData wrapper for recursion
-		tempRoot := &gokeepasslib.RootData{
-			Groups: []gokeepasslib.Group{subGroup},
-		}
-		m.collectEntries(tempRoot, subGroupPath, entries)
+		m.collectEntriesFromGroup(&subGroup, subGroupPath, entries)
 	}
 }
 
