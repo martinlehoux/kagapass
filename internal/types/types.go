@@ -44,9 +44,9 @@ type Config struct {
 // DefaultConfig returns the default application configuration
 func DefaultConfig() Config {
 	return Config{
-		ClipboardClearSeconds: 30,
-		SearchDebounceMs:      100,
-		MaxSearchResults:      50,
+		ClipboardClearSeconds: 10,
+		SearchDebounceMs:      10,
+		MaxSearchResults:      10,
 		SessionTimeoutHours:   0, // 0 means until logout
 		DefaultDatabasePath:   "",
 	}

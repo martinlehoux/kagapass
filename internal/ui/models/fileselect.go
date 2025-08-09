@@ -7,56 +7,52 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/martinlehoux/kagapass/internal/types"
+	"github.com/martinlehoux/kagapass/internal/ui/style"
 )
 
 // FileSelectModel handles the file selection screen
 type FileSelectModel struct {
 	databases     types.DatabaseList
 	cursor        int
-	width         int
-	height        int
-	inputMode     bool
-	inputText     string
+	databaseInput textinput.Model
 	statusMessage string
 }
 
 // NewFileSelectModel creates a new file selection model
 func NewFileSelectModel(databases types.DatabaseList) *FileSelectModel {
 	return &FileSelectModel{
-		databases: databases,
-		cursor:    0,
+		databases:     databases,
+		databaseInput: textinput.New(),
+		cursor:        0,
+		statusMessage: "",
 	}
+}
+
+func (m *FileSelectModel) Init() tea.Cmd {
+	return textinput.Blink
 }
 
 // Update implements tea.Model
 func (m *FileSelectModel) Update(msg tea.Msg) (*FileSelectModel, tea.Cmd) {
+	var cmd tea.Cmd
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
 	case tea.KeyMsg:
 		// Handle input mode first - takes priority over navigation
-		if m.inputMode {
+		if m.databaseInput.Focused() {
 			switch msg.String() {
 			case "esc":
-				m.inputMode = false
-				m.inputText = ""
+				m.databaseInput.Blur()
+				m.databaseInput.Reset()
 				m.statusMessage = ""
 			case "enter":
-				// Process the input
 				return m.addDatabase()
-			case "backspace":
-				if len(m.inputText) > 0 {
-					m.inputText = m.inputText[:len(m.inputText)-1]
-				}
 			default:
-				// Handle regular typing in input mode
-				if len(msg.String()) == 1 {
-					m.inputText += msg.String()
-				}
+				m.databaseInput, cmd = m.databaseInput.Update(msg)
+				return m, cmd
 			}
 		} else {
 			// Handle navigation mode
@@ -70,23 +66,11 @@ func (m *FileSelectModel) Update(msg tea.Msg) (*FileSelectModel, tea.Cmd) {
 					m.cursor++
 				}
 			case "a":
-				m.inputMode = true
-				m.inputText = ""
-				m.statusMessage = "Enter path to KeePass database (.kdbx file):"
+				m.databaseInput.Focus()
+				m.statusMessage = ""
 			case "d":
-				if len(m.databases.Databases) > 0 && m.cursor < len(m.databases.Databases) {
-					// Remove selected database
-					db := m.databases.Databases[m.cursor]
-					m.databases.Databases = append(m.databases.Databases[:m.cursor], m.databases.Databases[m.cursor+1:]...)
-					if m.cursor >= len(m.databases.Databases) && m.cursor > 0 {
-						m.cursor--
-					}
-					m.statusMessage = fmt.Sprintf("Removed database: %s", db.Name)
-					
-					return m, func() tea.Msg {
-						return UpdateDatabaseListMsg{DatabaseList: m.databases}
-					}
-				}
+				m, cmd = m.removeDatabase()
+				return m, cmd
 			case "enter":
 				if len(m.databases.Databases) > 0 && m.cursor < len(m.databases.Databases) {
 					selected := &m.databases.Databases[m.cursor]
@@ -107,30 +91,16 @@ func (m *FileSelectModel) Update(msg tea.Msg) (*FileSelectModel, tea.Cmd) {
 func (m *FileSelectModel) View() string {
 	var b strings.Builder
 
-	// Header
-	title := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("#FAFAFA")).
-		Background(lipgloss.Color("#7D56F4")).
-		Padding(0, 1).
-		Render("KagaPass - Select Database")
-
+	title := style.ViewTitle.Render("KagaPass - Select Database")
 	b.WriteString(title + "\n\n")
 
-	// Show status message if any
 	if m.statusMessage != "" {
-		statusStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF6B6B"))
-		b.WriteString(statusStyle.Render(m.statusMessage) + "\n\n")
+		b.WriteString(style.StatusMessage.Render(m.statusMessage) + "\n\n")
 	}
 
-	// Handle input mode
-	if m.inputMode {
+	if m.databaseInput.Focused() {
 		b.WriteString("Enter path to KeePass database (.kdbx file):\n\n")
-		inputStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7D56F4")).
-			Background(lipgloss.Color("#2A2A2A")).
-			Padding(0, 1)
-		b.WriteString(inputStyle.Render(m.inputText+"_") + "\n\n")
+		b.WriteString(m.databaseInput.View() + "\n\n")
 		b.WriteString("[Enter] Add  [Esc] Cancel\n")
 		return m.wrapInBox(b.String())
 	}
@@ -185,25 +155,21 @@ func (m *FileSelectModel) View() string {
 
 // wrapInBox wraps content in a border box
 func (m *FileSelectModel) wrapInBox(content string) string {
-	boxStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#7D56F4")).
-		Padding(1, 2).
-		Width(60)
+	boxStyle := lipgloss.NewStyle().Padding(1, 2)
 
 	return boxStyle.Render(content)
 }
 
 // addDatabase validates and adds a new database to the list
 func (m *FileSelectModel) addDatabase() (*FileSelectModel, tea.Cmd) {
-	path := strings.TrimSpace(m.inputText)
-	
+	path := strings.TrimSpace(m.databaseInput.Value())
+
 	// Validate path
 	if path == "" {
 		m.statusMessage = "Path cannot be empty"
 		return m, nil
 	}
-	
+
 	// Expand ~ to home directory
 	if strings.HasPrefix(path, "~/") {
 		home, err := os.UserHomeDir()
@@ -211,13 +177,13 @@ func (m *FileSelectModel) addDatabase() (*FileSelectModel, tea.Cmd) {
 			path = filepath.Join(home, path[2:])
 		}
 	}
-	
+
 	// Check if file exists
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		m.statusMessage = "File does not exist"
 		return m, nil
 	}
-	
+
 	// Check if already in list
 	for _, db := range m.databases.Databases {
 		if db.Path == path {
@@ -225,20 +191,35 @@ func (m *FileSelectModel) addDatabase() (*FileSelectModel, tea.Cmd) {
 			return m, nil
 		}
 	}
-	
+
 	// Add database
 	newDB := types.Database{
 		Name:         filepath.Base(path),
 		Path:         path,
 		LastAccessed: time.Now(),
 	}
-	
+
 	m.databases.Databases = append(m.databases.Databases, newDB)
 	m.cursor = len(m.databases.Databases) - 1
-	m.inputMode = false
-	m.inputText = ""
+	m.databaseInput.Blur()
+	m.databaseInput.Reset()
 	m.statusMessage = fmt.Sprintf("Added database: %s", newDB.Name)
-	
+
+	return m, func() tea.Msg {
+		return UpdateDatabaseListMsg{DatabaseList: m.databases}
+	}
+}
+
+func (m *FileSelectModel) removeDatabase() (*FileSelectModel, tea.Cmd) {
+	if m.cursor < 0 || m.cursor >= len(m.databases.Databases) {
+		return m, nil
+	}
+
+	deleted := m.databases.Databases[m.cursor]
+	m.databases.Databases = append(m.databases.Databases[:m.cursor], m.databases.Databases[m.cursor+1:]...)
+	m.cursor = max(0, m.cursor-1)
+	m.statusMessage = fmt.Sprintf("Removed database: %s", deleted.Name)
+
 	return m, func() tea.Msg {
 		return UpdateDatabaseListMsg{DatabaseList: m.databases}
 	}

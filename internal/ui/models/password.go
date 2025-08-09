@@ -10,13 +10,13 @@ import (
 
 // PasswordModel handles the password input screen
 type PasswordModel struct {
-	database      *types.Database
-	password      string
-	errorMessage  string
-	width         int
-	height        int
-	attempts      int
-	maxAttempts   int
+	database     *types.Database
+	password     string
+	errorMessage string
+	width        int
+	height       int
+	attempts     int
+	maxAttempts  int
 }
 
 // NewPasswordModel creates a new password input model
@@ -88,7 +88,7 @@ func (m *PasswordModel) Update(msg tea.Msg) (*PasswordModel, tea.Cmd) {
 			m.attempts++
 			m.password = ""
 			m.errorMessage = msg.Error
-			
+
 			if m.attempts >= m.maxAttempts {
 				// Too many attempts, return to file selection
 				return m, func() tea.Msg {
@@ -136,25 +136,25 @@ func (m *PasswordModel) View() string {
 	if m.attempts > 0 {
 		attemptsLeft := m.maxAttempts - m.attempts
 		warningStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD23F"))
-		b.WriteString(warningStyle.Render("Incorrect password. Attempts remaining: ") + 
+		b.WriteString(warningStyle.Render("Incorrect password. Attempts remaining: ") +
 			warningStyle.Render(string(rune('0'+attemptsLeft))) + "\n\n")
 	}
 
 	// Password input
 	b.WriteString("Master Password:\n")
-	
+
 	// Show masked password
 	maskedPassword := strings.Repeat("•", len(m.password))
 	if len(m.password) == 0 {
 		maskedPassword = "(empty)"
 	}
-	
+
 	inputStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#7D56F4")).
 		Background(lipgloss.Color("#2A2A2A")).
 		Padding(0, 1).
 		Width(30)
-	
+
 	b.WriteString(inputStyle.Render(maskedPassword) + "\n\n")
 
 	// Footer
@@ -168,11 +168,7 @@ func (m *PasswordModel) View() string {
 
 // wrapInBox wraps content in a border box
 func (m *PasswordModel) wrapInBox(content string) string {
-	boxStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#7D56F4")).
-		Padding(1, 2).
-		Width(50)
+	boxStyle := lipgloss.NewStyle().Padding(1, 2)
 
 	return boxStyle.Render(content)
 }
