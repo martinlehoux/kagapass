@@ -3,10 +3,11 @@ package models
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/martinlehoux/kagamigo/kcore"
 	"github.com/martinlehoux/kagapass/internal/clipboard"
 	"github.com/martinlehoux/kagapass/internal/config"
 	"github.com/martinlehoux/kagapass/internal/database"
-	"github.com/martinlehoux/kagapass/internal/keyring"
+	"github.com/martinlehoux/kagapass/internal/secretstore"
 	"github.com/martinlehoux/kagapass/internal/types"
 )
 
@@ -31,7 +32,7 @@ type AppModel struct {
 
 	// Service managers
 	dbManager        *database.Manager
-	keyringManager   *keyring.Manager
+	secretStore      secretstore.SecretStore
 	clipboardManager *clipboard.Manager
 
 	// Screen-specific models
@@ -60,12 +61,8 @@ func NewAppModel() (*AppModel, error) {
 
 	// Initialize service managers
 	dbManager := database.New()
-	keyringMgr, err := keyring.New()
-	if err != nil {
-		// Keyring not available, continue without it
-		// TODO: Add warning or fallback behavior
-		keyringMgr = nil
-	}
+	secretStore, err := secretstore.NewKeyring()
+	kcore.Expect(err, "error initializing keyring")
 	clipboardMgr := clipboard.New()
 
 	app := &AppModel{
@@ -74,14 +71,14 @@ func NewAppModel() (*AppModel, error) {
 		configMgr:        configMgr,
 		databases:        databases,
 		dbManager:        dbManager,
-		keyringManager:   keyringMgr,
+		secretStore:      &secretStore,
 		clipboardManager: clipboardMgr,
 	}
 
 	// Initialize screen models
 	unlockDatabase := func(database types.Database, password string) tea.Cmd {
 		return UnlockDatabase(
-			app.dbManager, app.keyringManager, database, password,
+			app.dbManager, app.secretStore, database, password,
 		)
 	}
 	app.fileSelector = NewFileSelectModel(databases, unlockDatabase)
@@ -103,7 +100,7 @@ func (m *AppModel) Init() tea.Cmd {
 			if db.Path == m.databases.LastUsed {
 				// Found the last used database, try to unlock it automatically
 				selectedDB := &m.databases.Databases[i]
-				return UnlockDatabase(m.dbManager, m.keyringManager, *selectedDB, "")
+				return UnlockDatabase(m.dbManager, m.secretStore, *selectedDB, "")
 			}
 		}
 	}

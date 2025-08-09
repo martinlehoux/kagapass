@@ -7,7 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/martinlehoux/kagamigo/kcore"
 	"github.com/martinlehoux/kagapass/internal/database"
-	"github.com/martinlehoux/kagapass/internal/keyring"
+	"github.com/martinlehoux/kagapass/internal/secretstore"
 	"github.com/martinlehoux/kagapass/internal/types"
 )
 
@@ -21,25 +21,25 @@ type DatabaseUnlockFailed struct {
 	Error    error
 }
 
-func UnlockDatabase(dbMgr *database.Manager, keyringMgr *keyring.Manager, database types.Database, password string) tea.Cmd {
+func UnlockDatabase(dbMgr *database.Manager, secretStore secretstore.SecretStore, database types.Database, password string) tea.Cmd {
 	return func() tea.Msg {
 		if password != "" {
 			entries, err := unlockDatabaseWithPassword(dbMgr, database, password)
 			if err != nil {
 				return DatabaseUnlockFailed{Database: database, Error: err}
 			}
-			if keyringMgr != nil {
-				keyringMgr.Store(database.Path, password)
+			if secretStore != nil {
+				secretStore.Store(database.Path, []byte(password))
 				log.Println("Successfully stored password in keyring:", database.Name)
 			}
 			return DatabaseUnlocked{Database: database, Entries: entries}
 		}
-		if keyringMgr != nil {
-			password, err := keyringMgr.Retrieve(database.Path)
+		if secretStore != nil {
+			password, err := secretStore.Get(database.Path)
 			if err != nil {
 				return DatabaseUnlockFailed{Database: database, Error: err}
 			}
-			entries, err := unlockDatabaseWithPassword(dbMgr, database, password)
+			entries, err := unlockDatabaseWithPassword(dbMgr, database, string(password))
 			if err != nil {
 				return DatabaseUnlockFailed{Database: database, Error: err}
 			}
