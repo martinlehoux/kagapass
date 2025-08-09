@@ -116,11 +116,11 @@ func (m *DetailsModel) View() string {
 	b.WriteString(fmt.Sprintf("Title:    %s\n", m.entry.Title))
 	b.WriteString(fmt.Sprintf("Username: %s\n", m.entry.Username))
 	b.WriteString(fmt.Sprintf("Password: %s\n", strings.Repeat("*", 12)))
-	
+
 	if m.entry.URL != "" {
 		b.WriteString(fmt.Sprintf("URL:      %s\n", m.entry.URL))
 	}
-	
+
 	if m.entry.Group != "" {
 		b.WriteString(fmt.Sprintf("Group:    %s\n", m.entry.Group))
 	}
@@ -154,16 +154,5 @@ func (m *DetailsModel) View() string {
 		Foreground(lipgloss.Color("#626262")).
 		Render(footer))
 
-	return m.wrapInBox(b.String())
-}
-
-// wrapInBox wraps content in a border box
-func (m *DetailsModel) wrapInBox(content string) string {
-	boxStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#7D56F4")).
-		Padding(1, 2).
-		Width(70)
-
-	return boxStyle.Render(content)
+	return b.String()
 }

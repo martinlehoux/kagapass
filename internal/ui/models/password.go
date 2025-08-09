@@ -163,14 +163,7 @@ func (m *PasswordModel) View() string {
 		Foreground(lipgloss.Color("#626262")).
 		Render(footer))
 
-	return m.wrapInBox(b.String())
-}
-
-// wrapInBox wraps content in a border box
-func (m *PasswordModel) wrapInBox(content string) string {
-	boxStyle := lipgloss.NewStyle().Padding(1, 2)
-
-	return boxStyle.Render(content)
+	return b.String()
 }
 
 // UnlockDatabaseMsg is sent to attempt database unlocking

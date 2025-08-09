@@ -102,13 +102,13 @@ func (m *FileSelectModel) View() string {
 		b.WriteString("Enter path to KeePass database (.kdbx file):\n\n")
 		b.WriteString(m.databaseInput.View() + "\n\n")
 		b.WriteString("[Enter] Add  [Esc] Cancel\n")
-		return m.wrapInBox(b.String())
+		return b.String()
 	}
 
 	if len(m.databases.Databases) == 0 {
 		b.WriteString("No KeePass databases configured.\n\n")
 		b.WriteString("Press 'a' to add a database file, 'Esc' to quit.\n")
-		return m.wrapInBox(b.String())
+		return b.String()
 	}
 
 	b.WriteString("Select KeePass Database:\n\n")
@@ -150,14 +150,7 @@ func (m *FileSelectModel) View() string {
 		Foreground(lipgloss.Color("#626262")).
 		Render(footer))
 
-	return m.wrapInBox(b.String())
-}
-
-// wrapInBox wraps content in a border box
-func (m *FileSelectModel) wrapInBox(content string) string {
-	boxStyle := lipgloss.NewStyle().Padding(1, 2)
-
-	return boxStyle.Render(content)
+	return b.String()
 }
 
 // addDatabase validates and adds a new database to the list

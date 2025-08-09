@@ -14,15 +14,15 @@ import (
 
 // SearchModel handles the main search interface
 type SearchModel struct {
-	searchInput     string
-	entries         []types.Entry
-	filteredItems   []fuzzy.Match
-	cursor          int
-	width           int
-	height          int
+	searchInput      string
+	entries          []types.Entry
+	filteredItems    []fuzzy.Match
+	cursor           int
+	width            int
+	height           int
 	clipboardManager *clipboard.Manager
-	statusMessage   string
-	dbName          string
+	statusMessage    string
+	dbName           string
 }
 
 // NewSearchModel creates a new search model
@@ -193,15 +193,15 @@ func (m *SearchModel) View() string {
 
 			if match.Index < len(m.entries) {
 				entry := m.entries[match.Index]
-				
+
 				// Format entry display
 				title := entry.Title
 				if title == "" {
 					title = "(No Title)"
 				}
-				
+
 				line := fmt.Sprintf("  %s %s", cursor, title)
-				
+
 				// Add group path if it exists
 				if entry.Group != "" {
 					groupStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#626262"))
@@ -230,7 +230,7 @@ func (m *SearchModel) View() string {
 		Foreground(lipgloss.Color("#626262")).
 		Render(footer))
 
-	return m.wrapInBox(b.String())
+	return b.String()
 }
 
 // search performs fuzzy search on entries
@@ -251,15 +251,4 @@ func (m *SearchModel) search() {
 	matches := fuzzy.Find(m.searchInput, targets)
 	m.filteredItems = matches
 	m.cursor = 0
-}
-
-// wrapInBox wraps content in a border box
-func (m *SearchModel) wrapInBox(content string) string {
-	boxStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#7D56F4")).
-		Padding(1, 2).
-		Width(65)
-
-	return boxStyle.Render(content)
 }

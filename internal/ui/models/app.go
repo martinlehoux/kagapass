@@ -2,8 +2,9 @@ package models
 
 import (
 	"strings"
-	
+
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/martinlehoux/kagapass/internal/clipboard"
 	"github.com/martinlehoux/kagapass/internal/config"
 	"github.com/martinlehoux/kagapass/internal/database"
@@ -23,18 +24,18 @@ const (
 
 // AppModel is the main application model
 type AppModel struct {
-	screen      Screen
-	config      types.Config
-	configMgr   *config.Manager
-	databases   types.DatabaseList
-	currentDB   *types.Database
-	entries     []types.Entry
-	
+	screen    Screen
+	config    types.Config
+	configMgr *config.Manager
+	databases types.DatabaseList
+	currentDB *types.Database
+	entries   []types.Entry
+
 	// Service managers
 	dbManager        *database.Manager
 	keyringManager   *keyring.Manager
 	clipboardManager *clipboard.Manager
-	
+
 	// Screen-specific models
 	fileSelector  *FileSelectModel
 	passwordModel *PasswordModel
@@ -173,23 +174,20 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View implements tea.Model
 func (m *AppModel) View() string {
+	return lipgloss.NewStyle().Padding(1, 2).Render(m.chooseView())
+}
+
+// View implements tea.Model
+func (m *AppModel) chooseView() string {
 	switch m.screen {
 	case FileSelectionScreen:
-		if m.fileSelector != nil {
-			return m.fileSelector.View()
-		}
+		return m.fileSelector.View()
 	case PasswordInputScreen:
-		if m.passwordModel != nil {
-			return m.passwordModel.View()
-		}
+		return m.passwordModel.View()
 	case MainSearchScreen:
-		if m.searchModel != nil {
-			return m.searchModel.View()
-		}
+		return m.searchModel.View()
 	case EntryDetailsScreen:
-		if m.detailsModel != nil {
-			return m.detailsModel.View()
-		}
+		return m.detailsModel.View()
 	}
 	return "Loading..."
 }
@@ -215,7 +213,7 @@ func (m *AppModel) handleEscape() (*AppModel, tea.Cmd) {
 // switchScreen handles screen switching messages
 func (m *AppModel) switchScreen(msg SwitchScreenMsg) (*AppModel, tea.Cmd) {
 	m.screen = msg.Screen
-	
+
 	switch msg.Screen {
 	case PasswordInputScreen:
 		if msg.Database != nil && m.passwordModel != nil {
@@ -245,7 +243,7 @@ func (m *AppModel) switchScreen(msg SwitchScreenMsg) (*AppModel, tea.Cmd) {
 			m.detailsModel.SetEntry(*msg.Entry)
 		}
 	}
-	
+
 	return m, nil
 }
 
@@ -260,14 +258,14 @@ type SwitchScreenMsg struct {
 // handleDatabaseUnlock attempts to unlock a database
 func (m *AppModel) handleDatabaseUnlock(msg UnlockDatabaseMsg) (*AppModel, tea.Cmd) {
 	password := msg.Password
-	
+
 	// If no password provided, try keyring first
 	if password == "" && m.keyringManager != nil && msg.Database != nil {
 		if storedPassword, err := m.keyringManager.Retrieve(msg.Database.Path); err == nil {
 			password = storedPassword
 		}
 	}
-	
+
 	// Attempt to unlock the database
 	return m, tea.Cmd(func() tea.Msg {
 		if m.dbManager == nil {
@@ -276,24 +274,24 @@ func (m *AppModel) handleDatabaseUnlock(msg UnlockDatabaseMsg) (*AppModel, tea.C
 				Error:   "Database manager not initialized",
 			}
 		}
-		
+
 		err := m.dbManager.Open(msg.Database.Path, password)
 		if err != nil {
 			// For development: if it looks like a test/demo request, return test data
-			if strings.Contains(strings.ToLower(msg.Database.Name), "test") || 
-			   strings.Contains(strings.ToLower(msg.Database.Name), "demo") {
+			if strings.Contains(strings.ToLower(msg.Database.Name), "test") ||
+				strings.Contains(strings.ToLower(msg.Database.Name), "demo") {
 				return DatabaseUnlockResultMsg{
 					Success: true,
 					Entries: database.CreateTestEntries(),
 				}
 			}
-			
+
 			return DatabaseUnlockResultMsg{
 				Success: false,
 				Error:   err.Error(),
 			}
 		}
-		
+
 		// Get entries from the database
 		entries, err := m.dbManager.GetEntries()
 		if err != nil {
@@ -302,12 +300,12 @@ func (m *AppModel) handleDatabaseUnlock(msg UnlockDatabaseMsg) (*AppModel, tea.C
 				Error:   "Failed to read entries: " + err.Error(),
 			}
 		}
-		
+
 		// Store password in keyring for future use
 		if m.keyringManager != nil && msg.Database != nil {
 			m.keyringManager.Store(msg.Database.Path, password)
 		}
-		
+
 		return DatabaseUnlockResultMsg{
 			Success: true,
 			Entries: entries,
@@ -326,7 +324,7 @@ func (m *AppModel) handleKeyringUnlock(msg TryKeyringUnlockMsg) (*AppModel, tea.
 			}
 		}
 	}
-	
+
 	// Try to get stored password
 	storedPassword, err := m.keyringManager.Retrieve(msg.Database.Path)
 	if err != nil {
@@ -338,7 +336,7 @@ func (m *AppModel) handleKeyringUnlock(msg TryKeyringUnlockMsg) (*AppModel, tea.
 			}
 		}
 	}
-	
+
 	// Try to unlock with stored password
 	return m, func() tea.Msg {
 		return UnlockDatabaseMsg{
