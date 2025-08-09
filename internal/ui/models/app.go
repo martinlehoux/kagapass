@@ -35,6 +35,9 @@ type AppModel struct {
 	secretStore      secretstore.SecretStore
 	clipboardManager *clipboard.Manager
 
+	// Commands
+	unlockDatabase func(database types.Database, password string) tea.Cmd
+
 	// Screen-specific models
 	fileSelector  *FileSelectModel
 	passwordModel *PasswordModel
@@ -76,13 +79,13 @@ func NewAppModel() (*AppModel, error) {
 	}
 
 	// Initialize screen models
-	unlockDatabase := func(database types.Database, password string) tea.Cmd {
-		return UnlockDatabase(
-			app.dbManager, app.secretStore, database, password,
-		)
+	unlockDatabase := UnlockDatabase{
+		databaseManager: dbManager,
+		secretStore:     &secretStore,
 	}
-	app.fileSelector = NewFileSelectModel(databases, unlockDatabase)
-	app.passwordModel = NewPasswordModel(unlockDatabase)
+	app.unlockDatabase = unlockDatabase.Handle
+	app.fileSelector = NewFileSelectModel(databases, unlockDatabase.Handle)
+	app.passwordModel = NewPasswordModel(unlockDatabase.Handle)
 	app.searchModel = NewSearchModel()
 	app.searchModel.SetClipboardManager(clipboardMgr)
 	app.detailsModel = NewDetailsModel()
@@ -99,8 +102,8 @@ func (m *AppModel) Init() tea.Cmd {
 		for i, db := range m.databases.Databases {
 			if db.Path == m.databases.LastUsed {
 				// Found the last used database, try to unlock it automatically
-				selectedDB := &m.databases.Databases[i]
-				return UnlockDatabase(m.dbManager, m.secretStore, *selectedDB, "")
+				selectedDB := m.databases.Databases[i]
+				return m.unlockDatabase(selectedDB, "")
 			}
 		}
 	}

@@ -21,25 +21,37 @@ type DatabaseUnlockFailed struct {
 	Error    error
 }
 
-func UnlockDatabase(dbMgr *database.Manager, secretStore secretstore.SecretStore, database types.Database, password string) tea.Cmd {
+type UnlockDatabase struct {
+	databaseManager *database.Manager
+	secretStore     secretstore.SecretStore
+}
+
+func NewUnlockDatabase(dbMgr *database.Manager, secretStore secretstore.SecretStore) *UnlockDatabase {
+	return &UnlockDatabase{
+		databaseManager: dbMgr,
+		secretStore:     secretStore,
+	}
+}
+
+func (u *UnlockDatabase) Handle(database types.Database, password string) tea.Cmd {
 	return func() tea.Msg {
 		if password != "" {
-			entries, err := unlockDatabaseWithPassword(dbMgr, database, password)
+			entries, err := u.unlockDatabaseWithPassword(database, password)
 			if err != nil {
 				return DatabaseUnlockFailed{Database: database, Error: err}
 			}
-			if secretStore != nil {
-				secretStore.Store(database.Path, []byte(password))
+			if u.secretStore != nil {
+				u.secretStore.Store(database.Path, []byte(password))
 				log.Println("Successfully stored password in keyring:", database.Name)
 			}
 			return DatabaseUnlocked{Database: database, Entries: entries}
 		}
-		if secretStore != nil {
-			password, err := secretStore.Get(database.Path)
+		if u.secretStore != nil {
+			password, err := u.secretStore.Get(database.Path)
 			if err != nil {
 				return DatabaseUnlockFailed{Database: database, Error: err}
 			}
-			entries, err := unlockDatabaseWithPassword(dbMgr, database, string(password))
+			entries, err := u.unlockDatabaseWithPassword(database, string(password))
 			if err != nil {
 				return DatabaseUnlockFailed{Database: database, Error: err}
 			}
@@ -49,12 +61,12 @@ func UnlockDatabase(dbMgr *database.Manager, secretStore secretstore.SecretStore
 	}
 }
 
-func unlockDatabaseWithPassword(dbMgr *database.Manager, database types.Database, password string) ([]types.Entry, error) {
-	err := dbMgr.Open(database.Path, password)
+func (u *UnlockDatabase) unlockDatabaseWithPassword(database types.Database, password string) ([]types.Entry, error) {
+	err := u.databaseManager.Open(database.Path, password)
 	if err != nil {
 		return nil, kcore.Wrap(err, "failed to open database")
 	}
-	entries, err := dbMgr.GetEntries()
+	entries, err := u.databaseManager.GetEntries()
 	if err != nil {
 		return nil, kcore.Wrap(err, "failed to get entries")
 	}
