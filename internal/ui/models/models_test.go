@@ -1,6 +1,7 @@
 package models
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -408,5 +409,51 @@ func TestPasswordModelView(t *testing.T) {
 	
 	if !strings.Contains(view, "••••••") {
 		t.Error("Expected masked password characters in view")
+	}
+}
+
+func TestAppModelEscKeyInDatabaseSelection(t *testing.T) {
+	// Create temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "kagapass-esc-test-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Override home directory for testing
+	originalHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", originalHome)
+
+	// Create app model (starts on file selection screen)
+	app, err := NewAppModel()
+	if err != nil {
+		t.Fatalf("Failed to create app model: %v", err)
+	}
+
+	// Should start on file selection screen
+	view := app.View()
+	if view == "" {
+		t.Error("App view should not be empty")
+	}
+
+	// Press Esc - should quit the application
+	newModel, cmd := app.Update(tea.KeyMsg{Type: tea.KeyEsc})
+
+	// Check if quit command was returned
+	if cmd == nil {
+		t.Error("Expected quit command when pressing Esc on file selection screen, got nil")
+	} else {
+		// Execute the command to see what message it returns
+		msg := cmd()
+		quitMsg := tea.Quit()
+		if msg != quitMsg {
+			t.Error("Expected tea.Quit message when pressing Esc on file selection screen")
+		}
+	}
+
+	// Model should be updated
+	if newModel == nil {
+		t.Error("Expected updated model, got nil")
 	}
 }

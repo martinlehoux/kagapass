@@ -184,6 +184,8 @@ func (m *AppModel) View() string {
 // handleEscape handles the escape key based on current screen
 func (m *AppModel) handleEscape() (*AppModel, tea.Cmd) {
 	switch m.screen {
+	case FileSelectionScreen:
+		return m, tea.Quit
 	case PasswordInputScreen:
 		m.screen = FileSelectionScreen
 		return m, nil
