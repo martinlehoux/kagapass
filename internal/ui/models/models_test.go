@@ -15,7 +15,7 @@ import (
 )
 
 var unlockDatabase = &UnlockDatabase{
-	databaseManager: nil,
+	keepassLoader: nil,
 	secretStore:     nil,
 }
 

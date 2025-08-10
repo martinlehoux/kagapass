@@ -38,7 +38,7 @@ func (m *PasswordModel) Update(msg tea.Msg) (*PasswordModel, tea.Cmd) {
 		switch msg.String() {
 		case "enter":
 			if m.password != "" {
-				return m, m.unlockDatabase.Handle(m.database, m.password)
+				return m, m.unlockDatabase.Handle(m.database, []byte(m.password))
 			}
 		case "esc":
 			m.exit()

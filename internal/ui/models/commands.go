@@ -6,7 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/martinlehoux/kagamigo/kcore"
-	"github.com/martinlehoux/kagapass/internal/database"
+	"github.com/martinlehoux/kagapass/internal/keepass"
 	"github.com/martinlehoux/kagapass/internal/secretstore"
 	"github.com/martinlehoux/kagapass/internal/types"
 )
@@ -22,13 +22,13 @@ type DatabaseUnlockFailed struct {
 }
 
 type UnlockDatabase struct {
-	databaseManager *database.Manager
-	secretStore     secretstore.SecretStore
+	keepassLoader *keepass.Loader
+	secretStore   secretstore.SecretStore
 }
 
-func (u *UnlockDatabase) Handle(database types.Database, password string) tea.Cmd {
+func (u *UnlockDatabase) Handle(database types.Database, password []byte) tea.Cmd {
 	return func() tea.Msg {
-		if password != "" {
+		if len(password) > 0 {
 			entries, err := u.unlockDatabaseWithPassword(database, password)
 			if err != nil {
 				return DatabaseUnlockFailed{Database: database, Error: err}
@@ -48,7 +48,7 @@ func (u *UnlockDatabase) Handle(database types.Database, password string) tea.Cm
 			if err != nil {
 				return DatabaseUnlockFailed{Database: database, Error: err}
 			}
-			entries, err := u.unlockDatabaseWithPassword(database, string(password))
+			entries, err := u.unlockDatabaseWithPassword(database, password)
 			if err != nil {
 				return DatabaseUnlockFailed{Database: database, Error: err}
 			}
@@ -58,22 +58,15 @@ func (u *UnlockDatabase) Handle(database types.Database, password string) tea.Cm
 	}
 }
 
-func (u *UnlockDatabase) unlockDatabaseWithPassword(database types.Database, password string) ([]types.Entry, error) {
-	err := u.databaseManager.Open(database.Path, password)
+func (u *UnlockDatabase) unlockDatabaseWithPassword(database types.Database, password []byte) ([]types.Entry, error) {
+	keepass, err := u.keepassLoader.Load(database.Path, password)
 	if err != nil {
 		return nil, kcore.Wrap(err, "failed to open database")
 	}
-	entries, err := u.databaseManager.GetEntries()
+	entries, err := keepass.Entries()
 	if err != nil {
 		return nil, kcore.Wrap(err, "failed to get entries")
 	}
+	defer keepass.Close()
 	return entries, nil
-}
-
-type SwitchScreen struct{}
-
-func (s *SwitchScreen) Handle() tea.Cmd {
-	return func() tea.Msg {
-		return nil
-	}
 }

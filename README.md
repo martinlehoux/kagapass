@@ -167,9 +167,11 @@ The application follows a clean architecture pattern with separate layers for UI
 - Tea Model reference vs value
 - fmt.Errorf
 - password input
-- Database unlock: < 2 seconds
-- Search response: < 100ms for databases with 1000+ entries
-- Memory usage: < 50MB per open database
+- open previous database
+- Performance
+  - Database unlock: < 2 seconds
+  - Search response: < 100ms for databases with 1000+ entries
+  - Memory usage: < 50MB per open database
 
 ## Resources
 

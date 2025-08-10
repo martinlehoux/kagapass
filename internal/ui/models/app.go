@@ -2,13 +2,14 @@ package models
 
 import (
 	"log"
+	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/martinlehoux/kagamigo/kcore"
 	"github.com/martinlehoux/kagapass/internal/clipboard"
 	"github.com/martinlehoux/kagapass/internal/config"
-	"github.com/martinlehoux/kagapass/internal/database"
+	"github.com/martinlehoux/kagapass/internal/keepass"
 	"github.com/martinlehoux/kagapass/internal/secretstore"
 	"github.com/martinlehoux/kagapass/internal/types"
 )
@@ -32,9 +33,9 @@ type AppModel struct {
 	databases types.DatabaseList
 
 	// Service managers
-	dbManager   *database.Manager
-	secretStore secretstore.SecretStore
-	clipboard   *clipboard.Clipboard
+	keepassLoader *keepass.Loader
+	secretStore   secretstore.SecretStore
+	clipboard     *clipboard.Clipboard
 
 	// Commands
 	unlockDatabase *UnlockDatabase
@@ -64,20 +65,20 @@ func NewAppModel() (*AppModel, error) {
 	}
 
 	// Initialize service managers
-	dbManager := database.New()
+	keepassLoader := keepass.NewLoader(os.DirFS("/home/kagamino"))
 	secretStore, err := secretstore.NewKeyring()
 	kcore.Expect(err, "error initializing keyring")
 	clipboard := clipboard.New()
 	unlockDatabase := &UnlockDatabase{
-		databaseManager: dbManager,
-		secretStore:     &secretStore,
+		keepassLoader: keepassLoader,
+		secretStore:   &secretStore,
 	}
 	app := &AppModel{
 		screen:         FileSelectionScreen,
 		config:         cfg,
 		configMgr:      configMgr,
 		databases:      databases,
-		dbManager:      dbManager,
+		keepassLoader:  keepassLoader,
 		secretStore:    &secretStore,
 		clipboard:      clipboard,
 		unlockDatabase: unlockDatabase,
@@ -98,7 +99,7 @@ func (m *AppModel) Init() tea.Cmd {
 		for i, db := range m.databases.Databases {
 			if db.Path == m.databases.LastUsed {
 				// Found the last used database, try to unlock it automatically
-				return m.unlockDatabase.Handle(m.databases.Databases[i], "")
+				return m.unlockDatabase.Handle(m.databases.Databases[i], []byte{})
 			}
 		}
 	}
@@ -219,7 +220,7 @@ func (m *AppModel) switchMainSearchScreen(database types.Database, entries []typ
 		if err != nil {
 			log.Printf("failed to save database list: %v", err)
 		}
-		return nil
+		return UpdateDatabaseListMsg{DatabaseList: m.databases}
 	}
 }
 
