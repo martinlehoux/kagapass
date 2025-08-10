@@ -2,9 +2,11 @@ package database
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
+	"github.com/martinlehoux/kagamigo/kcore"
 	"github.com/martinlehoux/kagapass/internal/types"
 	"github.com/tobischo/gokeepasslib/v3"
 )
@@ -22,11 +24,16 @@ func New() *Manager {
 
 // Open loads and decrypts a KeePass database
 func (m *Manager) Open(filePath, masterPassword string) error {
-	file, err := os.Open(filePath)
+	file, err := os.Open(filePath) // #nosec G304 // At some point we need to open a file
 	if err != nil {
 		return fmt.Errorf("failed to open database file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			log.Printf("failed to close database file: %v", err)
+		}
+	}()
 
 	db := gokeepasslib.NewDatabase()
 	db.Credentials = gokeepasslib.NewPasswordCredentials(masterPassword)
@@ -37,7 +44,10 @@ func (m *Manager) Open(filePath, masterPassword string) error {
 	}
 
 	// Unlock protected entries
-	db.UnlockProtectedEntries()
+	err = db.UnlockProtectedEntries()
+	if err != nil {
+		return kcore.Wrap(err, "failed to unlock protected entries")
+	}
 
 	m.db = db
 	m.filePath = filePath
@@ -79,15 +89,16 @@ func (m *Manager) collectEntriesFromGroup(group *gokeepasslib.Group, groupPath s
 
 		// Extract common fields
 		for _, value := range entry.Values {
-			if value.Key == "Title" {
+			switch value.Key {
+			case "Title":
 				entryData.Title = value.Value.Content
-			} else if value.Key == "UserName" {
+			case "UserName":
 				entryData.Username = value.Value.Content
-			} else if value.Key == "Password" {
+			case "Password":
 				entryData.Password = value.Value.Content
-			} else if value.Key == "URL" {
+			case "URL":
 				entryData.URL = value.Value.Content
-			} else if value.Key == "Notes" {
+			case "Notes":
 				entryData.Notes = value.Value.Content
 			}
 		}
@@ -120,7 +131,10 @@ func (m *Manager) collectEntriesFromGroup(group *gokeepasslib.Group, groupPath s
 func (m *Manager) Close() {
 	if m.db != nil {
 		// Lock protected entries to clear passwords from memory
-		m.db.LockProtectedEntries()
+		err := m.db.LockProtectedEntries()
+		if err != nil {
+			log.Printf("failed to lock protected entries: %v", err)
+		}
 		m.db = nil
 	}
 	m.filePath = ""

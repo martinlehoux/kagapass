@@ -23,7 +23,7 @@ func New() (*Manager, error) {
 	}
 
 	configDir := filepath.Join(homeDir, ".config", "kagapass")
-	if err := os.MkdirAll(configDir, 0755); err != nil {
+	if err := os.MkdirAll(configDir, 0o750); err != nil {
 		return nil, err
 	}
 
@@ -62,7 +62,7 @@ func (m *Manager) SaveConfig(config types.Config) error {
 		return err
 	}
 
-	return os.WriteFile(m.configPath, data, 0644)
+	return os.WriteFile(m.configPath, data, 0o600)
 }
 
 // LoadDatabaseList loads the list of configured databases
@@ -96,5 +96,5 @@ func (m *Manager) SaveDatabaseList(dbList types.DatabaseList) error {
 		return err
 	}
 
-	return os.WriteFile(m.databasePath, data, 0644)
+	return os.WriteFile(m.databasePath, data, 0o600)
 }

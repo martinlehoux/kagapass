@@ -13,48 +13,35 @@ import (
 // PasswordModel handles the password input screen
 type PasswordModel struct {
 	// Commands
-	unlockDatabase func(database types.Database, password string) tea.Cmd
+	unlockDatabase *UnlockDatabase
+	exit           func()
 
-	database     *types.Database
+	database     types.Database
 	password     string
 	errorMessage string
-	width        int
-	height       int
 }
 
-// NewPasswordModel creates a new password input model
-func NewPasswordModel(unlockDatabase func(database types.Database, password string) tea.Cmd) *PasswordModel {
+func NewPasswordModel(unlockDatabase *UnlockDatabase, exit func(), database types.Database) *PasswordModel {
 	return &PasswordModel{
 		unlockDatabase: unlockDatabase,
+		exit:           exit,
+		database:       database,
 		password:       "",
+		errorMessage:   "",
 	}
-}
-
-// SetDatabase sets the database to unlock
-func (m *PasswordModel) SetDatabase(db *types.Database) {
-	m.database = db
-	m.password = ""
-	m.errorMessage = ""
 }
 
 // Update implements tea.Model
 func (m *PasswordModel) Update(msg tea.Msg) (*PasswordModel, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "enter":
 			if m.password != "" {
-				return m, m.unlockDatabase(*m.database, m.password)
+				return m, m.unlockDatabase.Handle(m.database, m.password)
 			}
 		case "esc":
-			return m, func() tea.Msg {
-				return SwitchScreenMsg{
-					Screen: FileSelectionScreen,
-				}
-			}
+			m.exit()
 		case "backspace":
 			if len(m.password) > 0 {
 				m.password = m.password[:len(m.password)-1]
@@ -80,14 +67,12 @@ func (m *PasswordModel) View() string {
 	b.WriteString(style.ViewTitle.Render("Enter Master Password") + "\n\n")
 
 	// Database info
-	if m.database != nil {
-		b.WriteString("Database: " + m.database.Name + "\n")
-		if m.database.Path != "" {
-			pathStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#626262"))
-			b.WriteString(pathStyle.Render("Path: "+m.database.Path) + "\n")
-		}
-		b.WriteString("\n")
+	b.WriteString("Database: " + m.database.Name + "\n")
+	if m.database.Path != "" {
+		pathStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#626262"))
+		b.WriteString(pathStyle.Render("Path: "+m.database.Path) + "\n")
 	}
+	b.WriteString("\n")
 
 	// Error message
 	if m.errorMessage != "" {

@@ -19,45 +19,31 @@ type SearchModel struct {
 	entries          []types.Entry
 	filteredItems    []fuzzy.Match
 	cursor           int
-	width            int
-	height           int
-	clipboardManager *clipboard.Manager
+	clipboardManager *clipboard.Clipboard
 	statusMessage    string
 	dbName           string
+
+	// Actions
+	viewDetails func(entry types.Entry)
 }
 
 // NewSearchModel creates a new search model
-func NewSearchModel() *SearchModel {
+func NewSearchModel(clipboard *clipboard.Clipboard, entries []types.Entry, viewDetails func(entry types.Entry), dbName string) *SearchModel {
 	return &SearchModel{
+		clipboardManager: clipboard,
+		entries:          entries,
+		dbName:           dbName,
 		searchInput:      "",
-		entries:          []types.Entry{},
 		cursor:           0,
-		clipboardManager: clipboard.New(),
+		viewDetails:      viewDetails,
+		filteredItems:    []fuzzy.Match{},
+		statusMessage:    "",
 	}
-}
-
-// SetClipboardManager sets the clipboard manager
-func (m *SearchModel) SetClipboardManager(clipManager *clipboard.Manager) {
-	m.clipboardManager = clipManager
-}
-
-// SetDatabaseName sets the current database name for display
-func (m *SearchModel) SetDatabaseName(name string) {
-	m.dbName = name
-}
-
-// SetEntries updates the entries list and triggers search
-func (m *SearchModel) SetEntries(entries []types.Entry) {
-	m.entries = entries
-	m.search()
 }
 
 // Update implements tea.Model
 func (m *SearchModel) Update(msg tea.Msg) (*SearchModel, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "up", "k":
@@ -72,13 +58,8 @@ func (m *SearchModel) Update(msg tea.Msg) (*SearchModel, tea.Cmd) {
 			if len(m.filteredItems) > 0 && m.cursor < len(m.filteredItems) {
 				entryIndex := m.filteredItems[m.cursor].Index
 				if entryIndex < len(m.entries) {
-					entry := &m.entries[entryIndex]
-					return m, func() tea.Msg {
-						return SwitchScreenMsg{
-							Screen: EntryDetailsScreen,
-							Entry:  entry,
-						}
-					}
+					entry := m.entries[entryIndex]
+					m.viewDetails(entry)
 				}
 			}
 		case "ctrl+b":

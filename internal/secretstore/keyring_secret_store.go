@@ -18,7 +18,7 @@ type keyringSecretStore struct {
 var _ SecretStore = (*keyringSecretStore)(nil)
 
 func NewKeyring() (keyringSecretStore, error) {
-	config := keyring.Config{
+	config := keyring.Config{ //nolint:exhaustruct // Configuration is too wide
 		ServiceName:              serviceName,
 		AllowedBackends:          []keyring.BackendType{keyring.SecretServiceBackend},
 		KeychainTrustApplication: true,
@@ -33,9 +33,12 @@ func getKey(key string) string {
 
 func (k keyringSecretStore) Store(key string, secret []byte) error {
 	item := keyring.Item{
-		Key:   getKey(key),
-		Data:  secret,
-		Label: fmt.Sprintf("%s - %s", serviceName, key),
+		Key:                         getKey(key),
+		Data:                        secret,
+		Label:                       fmt.Sprintf("%s - %s", serviceName, key),
+		Description:                 "",
+		KeychainNotTrustApplication: false,
+		KeychainNotSynchronizable:   false,
 	}
 	return k.ring.Set(item)
 }

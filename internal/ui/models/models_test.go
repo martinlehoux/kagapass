@@ -9,9 +9,15 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/martinlehoux/kagapass/internal/clipboard"
 	"github.com/martinlehoux/kagapass/internal/testor"
 	"github.com/martinlehoux/kagapass/internal/types"
 )
+
+var unlockDatabase = &UnlockDatabase{
+	databaseManager: nil,
+	secretStore:     nil,
+}
 
 func TestFileSelectModelWithDatabases(t *testing.T) {
 	dbList := types.DatabaseList{
@@ -22,7 +28,7 @@ func TestFileSelectModelWithDatabases(t *testing.T) {
 		LastUsed: "/path/to/test1.kdbx",
 	}
 
-	model := NewFileSelectModel(dbList, func(database types.Database, password string) tea.Cmd { return nil })
+	model := NewFileSelectModel(dbList, unlockDatabase)
 	if len(model.databases.Databases) != 2 {
 		t.Errorf("Expected 2 databases, got %d", len(model.databases.Databases))
 	}
@@ -37,7 +43,7 @@ func TestFileSelectModelNavigation(t *testing.T) {
 		},
 	}
 
-	model := NewFileSelectModel(dbList, func(database types.Database, password string) tea.Cmd { return nil })
+	model := NewFileSelectModel(dbList, unlockDatabase)
 
 	// Test down navigation
 	model, _ = model.Update(tea.KeyMsg{Type: tea.KeyDown})
@@ -66,7 +72,7 @@ func TestFileSelectModelNavigation(t *testing.T) {
 }
 
 func TestFileSelectModelInputMode(t *testing.T) {
-	model := NewFileSelectModel(types.DatabaseList{}, func(database types.Database, password string) tea.Cmd { return nil })
+	model := NewFileSelectModel(types.DatabaseList{}, unlockDatabase)
 
 	// Enter input mode
 	model, _ = model.Update(testor.KeyMsgRune('a'))
@@ -106,7 +112,7 @@ func TestFileSelectModelInputMode(t *testing.T) {
 }
 
 func TestFileSelectModelView(t *testing.T) {
-	model := NewFileSelectModel(types.DatabaseList{}, func(database types.Database, password string) tea.Cmd { return nil })
+	model := NewFileSelectModel(types.DatabaseList{}, unlockDatabase)
 
 	view := model.View()
 	if view == "" {
@@ -124,7 +130,7 @@ func TestFileSelectModelView(t *testing.T) {
 		},
 	}
 
-	model = NewFileSelectModel(dbList, func(database types.Database, password string) tea.Cmd { return nil })
+	model = NewFileSelectModel(dbList, unlockDatabase)
 	view = model.View()
 
 	if !strings.Contains(view, "test.kdbx") {
@@ -133,15 +139,11 @@ func TestFileSelectModelView(t *testing.T) {
 }
 
 func TestSearchModelSearch(t *testing.T) {
-	model := NewSearchModel()
-
-	entries := []types.Entry{
+	model := NewSearchModel(clipboard.New(), []types.Entry{
 		{Title: "GitHub Personal", Username: "user1"},
 		{Title: "Gmail", Username: "user2"},
 		{Title: "GitHub Work", Username: "user3"},
-	}
-
-	model.SetEntries(entries)
+	}, func(entry types.Entry) {}, "test")
 
 	// Search for "github"
 	model.searchInput = "github"
@@ -169,15 +171,12 @@ func TestSearchModelSearch(t *testing.T) {
 }
 
 func TestSearchModelNavigation(t *testing.T) {
-	model := NewSearchModel()
-
-	entries := []types.Entry{
+	model := NewSearchModel(clipboard.New(), []types.Entry{
 		{Title: "Entry1", Username: "user1"},
 		{Title: "Entry2", Username: "user2"},
 		{Title: "Entry3", Username: "user3"},
-	}
+	}, func(entry types.Entry) {}, "")
 
-	model.SetEntries(entries)
 	model.searchInput = "entry"
 	model.search()
 
@@ -199,15 +198,6 @@ func TestSearchModelNavigation(t *testing.T) {
 }
 
 func TestDetailsModelView(t *testing.T) {
-	model := NewDetailsModel()
-
-	// Test view without entry
-	view := model.View()
-	if !strings.Contains(view, "No entry selected") {
-		t.Error("Expected 'No entry selected' message when no entry is set")
-	}
-
-	// Test view with entry
 	entry := types.Entry{
 		Title:    "Test Entry",
 		Username: "testuser",
@@ -216,9 +206,10 @@ func TestDetailsModelView(t *testing.T) {
 		Notes:    "Test notes",
 		Group:    "Test/Group",
 	}
+	model := NewDetailsModel(clipboard.New(), entry)
 
-	model.SetEntry(entry)
-	view = model.View()
+	// Test view with entry
+	view := model.View()
 
 	if !strings.Contains(view, entry.Title) {
 		t.Error("Expected view to contain entry title")
@@ -239,7 +230,9 @@ func TestDetailsModelView(t *testing.T) {
 }
 
 func TestPasswordModelInput(t *testing.T) {
-	model := NewPasswordModel(func(database types.Database, password string) tea.Cmd { return nil })
+	model := &PasswordModel{
+		unlockDatabase: unlockDatabase,
+	}
 
 	// Type password
 	model, _ = model.Update(testor.KeyMsgRune('p'))
@@ -265,19 +258,16 @@ func TestPasswordModelInput(t *testing.T) {
 }
 
 func TestPasswordModelView(t *testing.T) {
-	model := NewPasswordModel(func(database types.Database, password string) tea.Cmd { return nil })
+	db := types.Database{
+		Name: "test.kdbx",
+		Path: "/path/to/test.kdbx",
+	}
+	model := NewPasswordModel(unlockDatabase, func() {}, db)
 
 	view := model.View()
 	if !strings.Contains(view, "Enter Master Password") {
 		t.Error("Expected view to contain password prompt")
 	}
-
-	// Set database
-	db := &types.Database{
-		Name: "test.kdbx",
-		Path: "/path/to/test.kdbx",
-	}
-	model.SetDatabase(db)
 
 	view = model.View()
 	if !strings.Contains(view, "test.kdbx") {
@@ -386,7 +376,7 @@ func TestSessionPersistence(t *testing.T) {
 	}
 
 	dbPath := filepath.Join(configDir, "databases.json")
-	if err := os.WriteFile(dbPath, data, 0o644); err != nil {
+	if err := os.WriteFile(dbPath, data, 0o600); err != nil {
 		t.Fatalf("Failed to write databases.json: %v", err)
 	}
 

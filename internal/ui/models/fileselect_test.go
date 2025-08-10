@@ -9,7 +9,7 @@ import (
 )
 
 func TestInputModeNavigationKeyConflicts(t *testing.T) {
-	model := NewFileSelectModel(types.DatabaseList{}, func(database types.Database, password string) tea.Cmd { return nil })
+	model := NewFileSelectModel(types.DatabaseList{}, unlockDatabase)
 
 	// Enter input mode by pressing 'a'
 	model, _ = model.Update(testor.KeyMsgRune('a'))
@@ -57,7 +57,7 @@ func TestNavigationKeysDisabledInInputMode(t *testing.T) {
 			{Name: "test1.kdbx", Path: "/path1"},
 			{Name: "test2.kdbx", Path: "/path2"},
 		},
-	}, func(database types.Database, password string) tea.Cmd { return nil })
+	}, unlockDatabase)
 
 	// Enter input mode
 	model, _ = model.Update(testor.KeyMsgRune('a'))
@@ -110,7 +110,7 @@ func TestNavigationKeysDisabledInInputMode(t *testing.T) {
 }
 
 func TestInputModeEscapeBehavior(t *testing.T) {
-	model := NewFileSelectModel(types.DatabaseList{}, func(database types.Database, password string) tea.Cmd { return nil })
+	model := NewFileSelectModel(types.DatabaseList{}, unlockDatabase)
 
 	// Enter input mode
 	model, _ = model.Update(testor.KeyMsgRune('a'))
@@ -147,7 +147,7 @@ func TestNavigationWorksWhenNotInInputMode(t *testing.T) {
 			{Name: "test2.kdbx", Path: "/path2"},
 			{Name: "test3.kdbx", Path: "/path3"},
 		},
-	}, func(database types.Database, password string) tea.Cmd { return nil })
+	}, unlockDatabase)
 
 	// Test vim-style navigation works in normal mode
 	initialCursor := model.cursor
@@ -171,7 +171,7 @@ func TestNavigationWorksWhenNotInInputMode(t *testing.T) {
 }
 
 func TestFileSelectInputModeToggling(t *testing.T) {
-	model := NewFileSelectModel(types.DatabaseList{}, func(database types.Database, password string) tea.Cmd { return nil })
+	model := NewFileSelectModel(types.DatabaseList{}, unlockDatabase)
 
 	// Initially not in input mode
 	if model.databaseInput.Focused() {

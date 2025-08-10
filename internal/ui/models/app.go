@@ -1,6 +1,8 @@
 package models
 
 import (
+	"log"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/martinlehoux/kagamigo/kcore"
@@ -15,7 +17,8 @@ import (
 type Screen int
 
 const (
-	FileSelectionScreen Screen = iota
+	None Screen = iota
+	FileSelectionScreen
 	PasswordInputScreen
 	MainSearchScreen
 	EntryDetailsScreen
@@ -27,16 +30,14 @@ type AppModel struct {
 	config    types.Config
 	configMgr *config.Manager
 	databases types.DatabaseList
-	currentDB *types.Database
-	entries   []types.Entry
 
 	// Service managers
-	dbManager        *database.Manager
-	secretStore      secretstore.SecretStore
-	clipboardManager *clipboard.Manager
+	dbManager   *database.Manager
+	secretStore secretstore.SecretStore
+	clipboard   *clipboard.Clipboard
 
 	// Commands
-	unlockDatabase func(database types.Database, password string) tea.Cmd
+	unlockDatabase *UnlockDatabase
 
 	// Screen-specific models
 	fileSelector  *FileSelectModel
@@ -66,30 +67,25 @@ func NewAppModel() (*AppModel, error) {
 	dbManager := database.New()
 	secretStore, err := secretstore.NewKeyring()
 	kcore.Expect(err, "error initializing keyring")
-	clipboardMgr := clipboard.New()
-
-	app := &AppModel{
-		screen:           FileSelectionScreen,
-		config:           cfg,
-		configMgr:        configMgr,
-		databases:        databases,
-		dbManager:        dbManager,
-		secretStore:      &secretStore,
-		clipboardManager: clipboardMgr,
-	}
-
-	// Initialize screen models
-	unlockDatabase := UnlockDatabase{
+	clipboard := clipboard.New()
+	unlockDatabase := &UnlockDatabase{
 		databaseManager: dbManager,
 		secretStore:     &secretStore,
 	}
-	app.unlockDatabase = unlockDatabase.Handle
-	app.fileSelector = NewFileSelectModel(databases, unlockDatabase.Handle)
-	app.passwordModel = NewPasswordModel(unlockDatabase.Handle)
-	app.searchModel = NewSearchModel()
-	app.searchModel.SetClipboardManager(clipboardMgr)
-	app.detailsModel = NewDetailsModel()
-	app.detailsModel.SetClipboardManager(clipboardMgr)
+	app := &AppModel{
+		screen:         FileSelectionScreen,
+		config:         cfg,
+		configMgr:      configMgr,
+		databases:      databases,
+		dbManager:      dbManager,
+		secretStore:    &secretStore,
+		clipboard:      clipboard,
+		unlockDatabase: unlockDatabase,
+		fileSelector:   NewFileSelectModel(databases, unlockDatabase),
+		passwordModel:  nil,
+		searchModel:    nil,
+		detailsModel:   nil,
+	}
 
 	return app, nil
 }
@@ -102,8 +98,7 @@ func (m *AppModel) Init() tea.Cmd {
 		for i, db := range m.databases.Databases {
 			if db.Path == m.databases.LastUsed {
 				// Found the last used database, try to unlock it automatically
-				selectedDB := m.databases.Databases[i]
-				return m.unlockDatabase(selectedDB, "")
+				return m.unlockDatabase.Handle(m.databases.Databases[i], "")
 			}
 		}
 	}
@@ -120,36 +115,26 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "esc":
 			return m.handleEscape()
 		}
-	case SwitchScreenMsg:
-		return m.switchScreen(msg)
 	case UpdateDatabaseListMsg:
 		m.databases = msg.DatabaseList
 		// Save to config
 		if m.configMgr != nil {
-			m.configMgr.SaveDatabaseList(m.databases)
+			err := m.configMgr.SaveDatabaseList(m.databases)
+			if err != nil {
+				log.Printf("failed to save database list: %v", err)
+			}
 		}
 		return m, nil
 	case DatabaseUnlocked:
-		return m, func() tea.Msg {
-			return SwitchScreenMsg{
-				Screen:   MainSearchScreen,
-				Database: &msg.Database,
-				Entries:  msg.Entries,
-			}
-		}
+		m.switchMainSearchScreen(msg.Database, msg.Entries)
+		return m, nil
 	case DatabaseUnlockFailed:
 		if m.screen == PasswordInputScreen {
 			var cmd tea.Cmd
 			m.passwordModel, cmd = m.passwordModel.Update(msg)
 			return m, cmd
 		} else {
-			return m, func() tea.Msg {
-				return SwitchScreenMsg{
-					Screen:   PasswordInputScreen,
-					Database: &msg.Database,
-					Entries:  nil,
-				}
-			}
+			m.switchPasswordInputScreen(msg.Database)
 		}
 	}
 
@@ -214,48 +199,31 @@ func (m *AppModel) handleEscape() (*AppModel, tea.Cmd) {
 	return m, nil
 }
 
-// switchScreen handles screen switching messages
-func (m *AppModel) switchScreen(msg SwitchScreenMsg) (*AppModel, tea.Cmd) {
-	m.screen = msg.Screen
-
-	switch msg.Screen {
-	case PasswordInputScreen:
-		if msg.Database != nil && m.passwordModel != nil {
-			m.passwordModel.SetDatabase(msg.Database)
-		}
-	case MainSearchScreen:
-		if msg.Database != nil {
-			m.currentDB = msg.Database
-			// Set entries if provided (from successful unlock)
-			if msg.Entries != nil {
-				m.entries = msg.Entries
-			} else {
-				m.entries = []types.Entry{}
-			}
-			if m.searchModel != nil {
-				m.searchModel.SetEntries(m.entries)
-				m.searchModel.SetDatabaseName(msg.Database.Name)
-			}
-			// Update LastUsed and save to config
-			m.databases.LastUsed = msg.Database.Path
-			if m.configMgr != nil {
-				m.configMgr.SaveDatabaseList(m.databases)
-			}
-		}
-	case EntryDetailsScreen:
-		if msg.Entry != nil && m.detailsModel != nil {
-			m.detailsModel.SetEntry(*msg.Entry)
-		}
-	}
-
-	return m, nil
+func (m *AppModel) switchPasswordInputScreen(database types.Database) {
+	m.passwordModel = NewPasswordModel(m.unlockDatabase, m.switchFileSelectionScreen, database)
+	m.screen = PasswordInputScreen
 }
 
-// TODO: Remove
-// SwitchScreenMsg is sent to switch between screens
-type SwitchScreenMsg struct {
-	Screen   Screen
-	Database *types.Database
-	Entry    *types.Entry
-	Entries  []types.Entry
+func (m *AppModel) switchFileSelectionScreen() {
+	m.fileSelector = NewFileSelectModel(m.databases, m.unlockDatabase)
+	m.screen = FileSelectionScreen
+}
+
+func (m *AppModel) switchMainSearchScreen(database types.Database, entries []types.Entry) (*AppModel, tea.Cmd) {
+	m.searchModel = NewSearchModel(m.clipboard, entries, m.switchEntryDetailsScreen, database.Name)
+	m.screen = MainSearchScreen
+	m.databases.LastUsed = database.Path
+
+	return m, func() tea.Msg {
+		err := m.configMgr.SaveDatabaseList(m.databases)
+		if err != nil {
+			log.Printf("failed to save database list: %v", err)
+		}
+		return nil
+	}
+}
+
+func (m *AppModel) switchEntryDetailsScreen(entry types.Entry) {
+	m.detailsModel = NewDetailsModel(m.clipboard, entry)
+	m.screen = EntryDetailsScreen
 }

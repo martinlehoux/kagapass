@@ -26,13 +26,6 @@ type UnlockDatabase struct {
 	secretStore     secretstore.SecretStore
 }
 
-func NewUnlockDatabase(dbMgr *database.Manager, secretStore secretstore.SecretStore) *UnlockDatabase {
-	return &UnlockDatabase{
-		databaseManager: dbMgr,
-		secretStore:     secretStore,
-	}
-}
-
 func (u *UnlockDatabase) Handle(database types.Database, password string) tea.Cmd {
 	return func() tea.Msg {
 		if password != "" {
@@ -41,8 +34,12 @@ func (u *UnlockDatabase) Handle(database types.Database, password string) tea.Cm
 				return DatabaseUnlockFailed{Database: database, Error: err}
 			}
 			if u.secretStore != nil {
-				u.secretStore.Store(database.Path, []byte(password))
-				log.Println("Successfully stored password in keyring:", database.Name)
+				err := u.secretStore.Store(database.Path, []byte(password))
+				if err != nil {
+					log.Printf("failed to store password in keyring: %v", err)
+				} else {
+					log.Println("Successfully stored password in keyring:", database.Name)
+				}
 			}
 			return DatabaseUnlocked{Database: database, Entries: entries}
 		}
@@ -71,4 +68,12 @@ func (u *UnlockDatabase) unlockDatabaseWithPassword(database types.Database, pas
 		return nil, kcore.Wrap(err, "failed to get entries")
 	}
 	return entries, nil
+}
+
+type SwitchScreen struct{}
+
+func (s *SwitchScreen) Handle() tea.Cmd {
+	return func() tea.Msg {
+		return nil
+	}
 }

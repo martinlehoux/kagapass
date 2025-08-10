@@ -14,40 +14,25 @@ import (
 
 // DetailsModel handles the entry details screen
 type DetailsModel struct {
-	entry            *types.Entry
-	scroll           int
-	width            int
-	height           int
-	clipboardManager *clipboard.Manager
-	statusMessage    string
+	entry         types.Entry
+	scroll        int
+	clipboard     *clipboard.Clipboard
+	statusMessage string
 }
 
 // NewDetailsModel creates a new details model
-func NewDetailsModel() *DetailsModel {
+func NewDetailsModel(clipboard *clipboard.Clipboard, entry types.Entry) *DetailsModel {
 	return &DetailsModel{
-		entry:            nil,
-		scroll:           0,
-		clipboardManager: clipboard.New(),
+		entry:         entry,
+		scroll:        0,
+		clipboard:     clipboard,
+		statusMessage: "",
 	}
-}
-
-// SetClipboardManager sets the clipboard manager
-func (m *DetailsModel) SetClipboardManager(clipManager *clipboard.Manager) {
-	m.clipboardManager = clipManager
-}
-
-// SetEntry sets the entry to display
-func (m *DetailsModel) SetEntry(entry types.Entry) {
-	m.entry = &entry
-	m.scroll = 0
 }
 
 // Update implements tea.Model
 func (m *DetailsModel) Update(msg tea.Msg) (*DetailsModel, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "up", "k":
@@ -58,8 +43,8 @@ func (m *DetailsModel) Update(msg tea.Msg) (*DetailsModel, tea.Cmd) {
 			// TODO: Implement proper scrolling based on content height
 			m.scroll++
 		case "ctrl+b":
-			if m.entry != nil && m.clipboardManager != nil && m.entry.Username != "" {
-				err := m.clipboardManager.Copy(m.entry.Username, 30*time.Second)
+			if m.clipboard != nil && m.entry.Username != "" {
+				err := m.clipboard.Copy(m.entry.Username, 30*time.Second)
 				if err != nil {
 					m.statusMessage = "Failed to copy username"
 				} else {
@@ -69,8 +54,8 @@ func (m *DetailsModel) Update(msg tea.Msg) (*DetailsModel, tea.Cmd) {
 				m.statusMessage = "No username to copy"
 			}
 		case "ctrl+c":
-			if m.entry != nil && m.clipboardManager != nil && m.entry.Password != "" {
-				err := m.clipboardManager.Copy(m.entry.Password, 30*time.Second)
+			if m.clipboard != nil && m.entry.Password != "" {
+				err := m.clipboard.Copy(m.entry.Password, 30*time.Second)
 				if err != nil {
 					m.statusMessage = "Failed to copy password"
 				} else {
@@ -86,10 +71,6 @@ func (m *DetailsModel) Update(msg tea.Msg) (*DetailsModel, tea.Cmd) {
 
 // View implements tea.Model
 func (m *DetailsModel) View() string {
-	if m.entry == nil {
-		return "No entry selected"
-	}
-
 	var b strings.Builder
 
 	b.WriteString(style.ViewTitle.Render("Entry Details") + "\n\n")

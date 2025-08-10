@@ -1,0 +1,11 @@
+version: "2"
+linters:
+  default: standard
+  enable:
+    - exhaustruct
+    - gosec
+    - gocyclo
+formatters:
+  enable: []
+run:
+  tests: false

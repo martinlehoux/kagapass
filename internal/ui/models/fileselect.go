@@ -17,7 +17,7 @@ import (
 // FileSelectModel handles the file selection screen
 type FileSelectModel struct {
 	// Commands
-	unlockDatabase func(database types.Database, password string) tea.Cmd
+	unlockDatabase *UnlockDatabase
 
 	databases     types.DatabaseList
 	cursor        int
@@ -25,8 +25,7 @@ type FileSelectModel struct {
 	statusMessage string
 }
 
-// NewFileSelectModel creates a new file selection model
-func NewFileSelectModel(databases types.DatabaseList, unlockDatabase func(database types.Database, password string) tea.Cmd) *FileSelectModel {
+func NewFileSelectModel(databases types.DatabaseList, unlockDatabase *UnlockDatabase) *FileSelectModel {
 	return &FileSelectModel{
 		unlockDatabase: unlockDatabase,
 		databases:      databases,
@@ -77,7 +76,7 @@ func (m *FileSelectModel) Update(msg tea.Msg) (*FileSelectModel, tea.Cmd) {
 				return m, cmd
 			case "enter":
 				if len(m.databases.Databases) > 0 && m.cursor < len(m.databases.Databases) {
-					return m, m.unlockDatabase(m.databases.Databases[m.cursor], "")
+					return m, m.unlockDatabase.Handle(m.databases.Databases[m.cursor], "")
 				}
 			case "esc":
 				return m, tea.Quit

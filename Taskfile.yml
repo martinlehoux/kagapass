@@ -1,0 +1,15 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  check:
+    cmds:
+      - gofmt -d -e -s .
+      - go tool golangci-lint run
+      - go tool govulncheck
+      - go test -race ./...
+
+  build:
+    cmds:
+      - go build -o kagapass main.go
