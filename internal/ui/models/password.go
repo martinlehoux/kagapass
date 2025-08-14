@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/martinlehoux/kagapass/internal/types"
+	"github.com/martinlehoux/kagapass/internal/ui/status"
 	"github.com/martinlehoux/kagapass/internal/ui/style"
 )
 
@@ -16,9 +17,9 @@ type PasswordModel struct {
 	unlockDatabase *UnlockDatabase
 	exit           func()
 
-	database     types.Database
-	password     string
-	errorMessage string
+	database types.Database
+	password string
+	status   status.Status
 }
 
 func NewPasswordModel(unlockDatabase *UnlockDatabase, exit func(), database types.Database) *PasswordModel {
@@ -27,7 +28,7 @@ func NewPasswordModel(unlockDatabase *UnlockDatabase, exit func(), database type
 		exit:           exit,
 		database:       database,
 		password:       "",
-		errorMessage:   "",
+		status:         status.Status{},
 	}
 }
 
@@ -73,13 +74,7 @@ func (m *PasswordModel) View() string {
 		b.WriteString(pathStyle.Render("Path: "+m.database.Path) + "\n")
 	}
 	b.WriteString("\n")
-
-	// Error message
-	if m.errorMessage != "" {
-		errorStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF6B6B"))
-		b.WriteString(errorStyle.Render("Error: "+m.errorMessage) + "\n\n")
-	}
-
+	b.WriteString(m.status.Render() + "\n\n")
 	// Password input
 	b.WriteString("Master Password:\n")
 

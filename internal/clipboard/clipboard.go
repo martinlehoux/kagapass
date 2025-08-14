@@ -15,7 +15,9 @@ type Clipboard struct {
 
 // New creates a new clipboard manager
 func New() *Clipboard {
-	return &Clipboard{}
+	return &Clipboard{
+		clearTimer: nil,
+	}
 }
 
 // Copy copies text to clipboard and sets up auto-clearing

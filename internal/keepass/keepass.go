@@ -2,6 +2,7 @@ package keepass
 
 import (
 	"io/fs"
+	"log"
 	"time"
 
 	"github.com/martinlehoux/kagapass/internal/types"
@@ -23,7 +24,12 @@ func (m *Loader) Load(path string, password []byte) (*KeePass, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			log.Printf("Error closing keepass file: %v", err)
+		}
+	}()
 
 	database := gokeepasslib.NewDatabase()
 	database.Credentials = gokeepasslib.NewPasswordCredentials(string(password))

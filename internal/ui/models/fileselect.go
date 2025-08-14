@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/martinlehoux/kagapass/internal/types"
+	"github.com/martinlehoux/kagapass/internal/ui/status"
 	"github.com/martinlehoux/kagapass/internal/ui/style"
 )
 
@@ -21,7 +22,7 @@ type FileSelectModel struct {
 	databases     types.DatabaseList
 	cursor        int
 	databaseInput textinput.Model
-	statusMessage string
+	status        status.Status
 }
 
 func NewFileSelectModel(databases types.DatabaseList, unlockDatabase *UnlockDatabase) *FileSelectModel {
@@ -30,7 +31,7 @@ func NewFileSelectModel(databases types.DatabaseList, unlockDatabase *UnlockData
 		databases:      databases,
 		databaseInput:  textinput.New(),
 		cursor:         0,
-		statusMessage:  "",
+		status:         status.Status{},
 	}
 }
 
@@ -49,7 +50,7 @@ func (m *FileSelectModel) Update(msg tea.Msg) (*FileSelectModel, tea.Cmd) {
 			case "esc":
 				m.databaseInput.Blur()
 				m.databaseInput.Reset()
-				m.statusMessage = ""
+				m.status = status.Status{}
 			case "enter":
 				return m.addDatabase()
 			default:
@@ -69,7 +70,7 @@ func (m *FileSelectModel) Update(msg tea.Msg) (*FileSelectModel, tea.Cmd) {
 				}
 			case "a":
 				m.databaseInput.Focus()
-				m.statusMessage = ""
+				m.status = status.Status{}
 			case "d":
 				m, cmd = m.removeDatabase()
 				return m, cmd
@@ -92,9 +93,7 @@ func (m *FileSelectModel) View() string {
 	title := style.ViewTitle.Render("KagaPass - Select Database")
 	b.WriteString(title + "\n\n")
 
-	if m.statusMessage != "" {
-		b.WriteString(style.StatusMessage.Render(m.statusMessage) + "\n\n")
-	}
+	b.WriteString(m.status.Render() + "\n\n")
 
 	if m.databaseInput.Focused() {
 		b.WriteString("Enter path to KeePass database (.kdbx file):\n\n")
@@ -157,14 +156,14 @@ func (m *FileSelectModel) addDatabase() (*FileSelectModel, tea.Cmd) {
 
 	// Validate path
 	if path == "" {
-		m.statusMessage = "Path cannot be empty"
+		m.status = status.Error("Path cannot be empty")
 		return m, nil
 	}
 
 	// Check if already in list
 	for _, db := range m.databases.Databases {
 		if db.Path == path {
-			m.statusMessage = "Database already in list"
+			m.status = status.Error("Database already in list")
 			return m, nil
 		}
 	}
@@ -180,7 +179,7 @@ func (m *FileSelectModel) addDatabase() (*FileSelectModel, tea.Cmd) {
 	m.cursor = len(m.databases.Databases) - 1
 	m.databaseInput.Blur()
 	m.databaseInput.Reset()
-	m.statusMessage = fmt.Sprintf("Added database: %s", newDB.Name)
+	m.status = status.Success(fmt.Sprintf("Added database: %s", newDB.Name))
 
 	return m, func() tea.Msg {
 		return UpdateDatabaseListMsg{DatabaseList: m.databases}
@@ -195,7 +194,7 @@ func (m *FileSelectModel) removeDatabase() (*FileSelectModel, tea.Cmd) {
 	deleted := m.databases.Databases[m.cursor]
 	m.databases.Databases = append(m.databases.Databases[:m.cursor], m.databases.Databases[m.cursor+1:]...)
 	m.cursor = max(0, m.cursor-1)
-	m.statusMessage = fmt.Sprintf("Removed database: %s", deleted.Name)
+	m.status = status.Success(fmt.Sprintf("Removed database: %s", deleted.Name))
 
 	return m, func() tea.Msg {
 		return UpdateDatabaseListMsg{DatabaseList: m.databases}

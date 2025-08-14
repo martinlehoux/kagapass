@@ -16,7 +16,7 @@ import (
 
 var unlockDatabase = &UnlockDatabase{
 	keepassLoader: nil,
-	secretStore:     nil,
+	secretStore:   nil,
 }
 
 func TestFileSelectModelWithDatabases(t *testing.T) {
@@ -80,7 +80,7 @@ func TestFileSelectModelInputMode(t *testing.T) {
 		t.Error("Expected input mode to be true after pressing 'a'")
 	}
 
-	if model.statusMessage != "" {
+	if model.status.Render() != "" {
 		t.Error("Expected no status message when entering input mode")
 	}
 

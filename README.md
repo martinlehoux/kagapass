@@ -168,6 +168,7 @@ The application follows a clean architecture pattern with separate layers for UI
 - fmt.Errorf
 - password input
 - open previous database
+- clear status msg auto
 - Performance
   - Database unlock: < 2 seconds
   - Search response: < 100ms for databases with 1000+ entries

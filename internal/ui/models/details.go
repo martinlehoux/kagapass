@@ -9,25 +9,27 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/martinlehoux/kagapass/internal/clipboard"
 	"github.com/martinlehoux/kagapass/internal/types"
+	"github.com/martinlehoux/kagapass/internal/ui/status"
 	"github.com/martinlehoux/kagapass/internal/ui/style"
 )
 
 // DetailsModel handles the entry details screen
 type DetailsModel struct {
-	entry         types.Entry
-	scroll        int
-	clipboard     *clipboard.Clipboard
-	statusMessage string
-	showPassword  bool
+	entry        types.Entry
+	scroll       int
+	clipboard    *clipboard.Clipboard
+	status       status.Status
+	showPassword bool
 }
 
 // NewDetailsModel creates a new details model
 func NewDetailsModel(clipboard *clipboard.Clipboard, entry types.Entry) *DetailsModel {
 	return &DetailsModel{
-		entry:         entry,
-		scroll:        0,
-		clipboard:     clipboard,
-		statusMessage: "",
+		entry:        entry,
+		scroll:       0,
+		clipboard:    clipboard,
+		status:       status.Status{},
+		showPassword: false,
 	}
 }
 
@@ -47,30 +49,30 @@ func (m *DetailsModel) Update(msg tea.Msg) (*DetailsModel, tea.Cmd) {
 			if m.clipboard != nil && m.entry.Username != "" {
 				err := m.clipboard.Copy(m.entry.Username, 30*time.Second)
 				if err != nil {
-					m.statusMessage = "Failed to copy username"
+					m.status = status.Error("Failed to copy username")
 				} else {
-					m.statusMessage = "Username copied to clipboard (will clear in 30s)"
+					m.status = status.Success("Username copied to clipboard (will clear in 30s)")
 				}
 			} else {
-				m.statusMessage = "No username to copy"
+				m.status = status.Error("No username to copy")
 			}
 		case "ctrl+c":
 			if m.clipboard != nil && m.entry.Password != "" {
 				err := m.clipboard.Copy(m.entry.Password, 30*time.Second)
 				if err != nil {
-					m.statusMessage = "Failed to copy password"
+					m.status = status.Error("Failed to copy password")
 				} else {
-					m.statusMessage = "Password copied to clipboard (will clear in 30s)"
+					m.status = status.Success("Password copied to clipboard (will clear in 30s)")
 				}
 			} else {
-				m.statusMessage = "No password to copy"
+				m.status = status.Error("No password to copy")
 			}
 		case "ctrl+p":
 			m.showPassword = !m.showPassword
 			if m.showPassword {
-				m.statusMessage = "Password revealed"
+				m.status = status.Success("Password revealed")
 			} else {
-				m.statusMessage = "Password hidden"
+				m.status = status.Success("Password hidden")
 			}
 		}
 	}
@@ -83,16 +85,7 @@ func (m *DetailsModel) View() string {
 
 	b.WriteString(style.ViewTitle.Render("Entry Details") + "\n\n")
 
-	// Show status message if any
-	if m.statusMessage != "" {
-		statusStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#32D74B"))
-		b.WriteString(statusStyle.Render(m.statusMessage) + "\n\n")
-		// Clear status message after showing
-		go func() {
-			time.Sleep(3 * time.Second)
-			m.statusMessage = ""
-		}()
-	}
+	b.WriteString(m.status.Render() + "\n\n")
 
 	// Entry details
 	b.WriteString(fmt.Sprintf("Title:    %s\n", m.entry.Title))

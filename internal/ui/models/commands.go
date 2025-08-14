@@ -63,10 +63,15 @@ func (u *UnlockDatabase) unlockDatabaseWithPassword(database types.Database, pas
 	if err != nil {
 		return nil, kcore.Wrap(err, "failed to open database")
 	}
+	defer func() {
+		err := keepass.Close()
+		if err != nil {
+			log.Printf("failed to close database: %v", err)
+		}
+	}()
 	entries, err := keepass.Entries()
 	if err != nil {
 		return nil, kcore.Wrap(err, "failed to get entries")
 	}
-	defer keepass.Close()
 	return entries, nil
 }

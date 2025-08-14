@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/martinlehoux/kagapass/internal/clipboard"
 	"github.com/martinlehoux/kagapass/internal/types"
+	"github.com/martinlehoux/kagapass/internal/ui/status"
 	"github.com/martinlehoux/kagapass/internal/ui/style"
 	"github.com/sahilm/fuzzy"
 )
@@ -20,7 +21,7 @@ type SearchModel struct {
 	filteredItems    []fuzzy.Match
 	cursor           int
 	clipboardManager *clipboard.Clipboard
-	statusMessage    string
+	status           status.Status
 	dbName           string
 
 	// Actions
@@ -37,7 +38,7 @@ func NewSearchModel(clipboard *clipboard.Clipboard, entries []types.Entry, viewD
 		cursor:           0,
 		viewDetails:      viewDetails,
 		filteredItems:    []fuzzy.Match{},
-		statusMessage:    "",
+		status:           status.Status{},
 	}
 }
 
@@ -70,12 +71,12 @@ func (m *SearchModel) Update(msg tea.Msg) (*SearchModel, tea.Cmd) {
 					if m.clipboardManager != nil && entry.Username != "" {
 						err := m.clipboardManager.Copy(entry.Username, 30*time.Second)
 						if err != nil {
-							m.statusMessage = "Failed to copy username"
+							m.status = status.Error("Failed to copy username")
 						} else {
-							m.statusMessage = "Username copied to clipboard (will clear in 30s)"
+							m.status = status.Success("Username copied to clipboard (will clear in 30s)")
 						}
 					} else {
-						m.statusMessage = "No username to copy"
+						m.status = status.Error("No username to copy")
 					}
 				}
 			}
@@ -87,12 +88,12 @@ func (m *SearchModel) Update(msg tea.Msg) (*SearchModel, tea.Cmd) {
 					if m.clipboardManager != nil && entry.Password != "" {
 						err := m.clipboardManager.Copy(entry.Password, 30*time.Second)
 						if err != nil {
-							m.statusMessage = "Failed to copy password"
+							m.status = status.Error("Failed to copy password")
 						} else {
-							m.statusMessage = "Password copied to clipboard (will clear in 30s)"
+							m.status = status.Success("Password copied to clipboard (will clear in 30s)")
 						}
 					} else {
-						m.statusMessage = "No password to copy"
+						m.status = status.Error("No password to copy")
 					}
 				}
 			}
@@ -126,16 +127,8 @@ func (m *SearchModel) View() string {
 	}
 	b.WriteString(style.ViewTitle.Render(titleText) + "\n\n")
 
-	// Show status message if any
-	if m.statusMessage != "" {
-		statusStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#32D74B"))
-		b.WriteString(statusStyle.Render(m.statusMessage) + "\n\n")
-		// Clear status message after showing
-		go func() {
-			time.Sleep(3 * time.Second)
-			m.statusMessage = ""
-		}()
-	}
+	// Always reserve space for status message to prevent layout shift
+	b.WriteString(m.status.Render() + "\n\n")
 
 	// Search input
 	searchLabel := "Search: "

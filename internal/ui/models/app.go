@@ -18,8 +18,7 @@ import (
 type Screen int
 
 const (
-	None Screen = iota
-	FileSelectionScreen
+	FileSelectionScreen Screen = iota
 	PasswordInputScreen
 	MainSearchScreen
 	EntryDetailsScreen
