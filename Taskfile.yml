@@ -13,3 +13,9 @@ tasks:
   build:
     cmds:
       - go build -o kagapass main.go
+
+  tools:
+    cmds:
+      - go get -tool github.com/golangci/golangci-lint/cmd/golangci-lint
+      - go get -tool golang.org/x/exp/cmd/gorelease
+      - go get -tool golang.org/x/vuln/cmd/govulncheck
