@@ -18,6 +18,7 @@ type DetailsModel struct {
 	scroll        int
 	clipboard     *clipboard.Clipboard
 	statusMessage string
+	showPassword  bool
 }
 
 // NewDetailsModel creates a new details model
@@ -64,6 +65,13 @@ func (m *DetailsModel) Update(msg tea.Msg) (*DetailsModel, tea.Cmd) {
 			} else {
 				m.statusMessage = "No password to copy"
 			}
+		case "ctrl+p":
+			m.showPassword = !m.showPassword
+			if m.showPassword {
+				m.statusMessage = "Password revealed"
+			} else {
+				m.statusMessage = "Password hidden"
+			}
 		}
 	}
 	return m, nil
@@ -89,7 +97,15 @@ func (m *DetailsModel) View() string {
 	// Entry details
 	b.WriteString(fmt.Sprintf("Title:    %s\n", m.entry.Title))
 	b.WriteString(fmt.Sprintf("Username: %s\n", m.entry.Username))
-	b.WriteString(fmt.Sprintf("Password: %s\n", strings.Repeat("*", 12)))
+
+	// Show password based on visibility toggle
+	var passwordDisplay string
+	if m.showPassword {
+		passwordDisplay = m.entry.Password
+	} else {
+		passwordDisplay = strings.Repeat("*", 12)
+	}
+	b.WriteString(fmt.Sprintf("Password: %s\n", passwordDisplay))
 
 	if m.entry.URL != "" {
 		b.WriteString(fmt.Sprintf("URL:      %s\n", m.entry.URL))
@@ -123,7 +139,7 @@ func (m *DetailsModel) View() string {
 	b.WriteString("\n")
 
 	// Footer
-	footer := "[Ctrl+B] Copy User  [Ctrl+C] Copy Pass  [Esc] Back"
+	footer := "[Ctrl+B] Copy User  [Ctrl+C] Copy Pass  [Ctrl+P] Toggle Pass  [Esc] Back"
 	b.WriteString(lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#626262")).
 		Render(footer))
