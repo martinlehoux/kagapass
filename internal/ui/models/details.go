@@ -13,7 +13,7 @@ import (
 	"github.com/martinlehoux/kagapass/internal/ui/style"
 )
 
-// DetailsModel handles the entry details screen
+// DetailsModel handles the entry details screen.
 type DetailsModel struct {
 	entry        types.Entry
 	scroll       int
@@ -22,7 +22,7 @@ type DetailsModel struct {
 	showPassword bool
 }
 
-// NewDetailsModel creates a new details model
+// NewDetailsModel creates a new details model.
 func NewDetailsModel(clipboard *clipboard.Clipboard, entry types.Entry) *DetailsModel {
 	return &DetailsModel{
 		entry:        entry,
@@ -33,7 +33,7 @@ func NewDetailsModel(clipboard *clipboard.Clipboard, entry types.Entry) *Details
 	}
 }
 
-// Update implements tea.Model
+// Update implements tea.Model.
 func (m *DetailsModel) Update(msg tea.Msg) (*DetailsModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -76,10 +76,11 @@ func (m *DetailsModel) Update(msg tea.Msg) (*DetailsModel, tea.Cmd) {
 			}
 		}
 	}
+
 	return m, nil
 }
 
-// View implements tea.Model
+// View implements tea.Model.
 func (m *DetailsModel) View() string {
 	var b strings.Builder
 
@@ -98,6 +99,7 @@ func (m *DetailsModel) View() string {
 	} else {
 		passwordDisplay = strings.Repeat("*", 12)
 	}
+
 	b.WriteString(fmt.Sprintf("Password: %s\n", passwordDisplay))
 
 	if m.entry.URL != "" {
@@ -118,6 +120,7 @@ func (m *DetailsModel) View() string {
 		for _, line := range noteLines {
 			b.WriteString(line + "\n")
 		}
+
 		b.WriteString("\n")
 	}
 
@@ -125,6 +128,7 @@ func (m *DetailsModel) View() string {
 	if !m.entry.Modified.IsZero() {
 		b.WriteString(fmt.Sprintf("Modified: %s\n", m.entry.Modified.Format("2006-01-02 15:04:05")))
 	}
+
 	if !m.entry.Created.IsZero() {
 		b.WriteString(fmt.Sprintf("Created:  %s\n", m.entry.Created.Format("2006-01-02 15:04:05")))
 	}

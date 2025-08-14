@@ -6,20 +6,20 @@ import (
 	"github.com/tobischo/gokeepasslib/v3"
 )
 
-// Database represents a KeePass database configuration
+// Database represents a KeePass database configuration.
 type Database struct {
 	Name         string    `json:"name"`
 	Path         string    `json:"path"`
 	LastAccessed time.Time `json:"last_accessed"`
 }
 
-// DatabaseList holds the list of configured databases
+// DatabaseList holds the list of configured databases.
 type DatabaseList struct {
 	Databases []Database `json:"databases"`
 	LastUsed  string     `json:"last_used"`
 }
 
-// Entry represents a KeePass entry with additional display information
+// Entry represents a KeePass entry with additional display information.
 type Entry struct {
 	Title    string
 	Username string
@@ -32,7 +32,7 @@ type Entry struct {
 	Raw      gokeepasslib.Entry
 }
 
-// Config holds application configuration
+// Config holds application configuration.
 type Config struct {
 	ClipboardClearSeconds int    `json:"clipboard_clear_seconds"`
 	SearchDebounceMs      int    `json:"search_debounce_ms"`
@@ -41,7 +41,7 @@ type Config struct {
 	DefaultDatabasePath   string `json:"default_database_path"`
 }
 
-// DefaultConfig returns the default application configuration
+// DefaultConfig returns the default application configuration.
 func DefaultConfig() Config {
 	return Config{
 		ClipboardClearSeconds: 10,

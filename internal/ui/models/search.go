@@ -14,7 +14,7 @@ import (
 	"github.com/sahilm/fuzzy"
 )
 
-// SearchModel handles the main search interface
+// SearchModel handles the main search interface.
 type SearchModel struct {
 	searchInput      string
 	entries          []types.Entry
@@ -28,7 +28,7 @@ type SearchModel struct {
 	viewDetails func(entry types.Entry)
 }
 
-// NewSearchModel creates a new search model
+// NewSearchModel creates a new search model.
 func NewSearchModel(clipboard *clipboard.Clipboard, entries []types.Entry, viewDetails func(entry types.Entry), dbName string) *SearchModel {
 	return &SearchModel{
 		clipboardManager: clipboard,
@@ -42,7 +42,7 @@ func NewSearchModel(clipboard *clipboard.Clipboard, entries []types.Entry, viewD
 	}
 }
 
-// Update implements tea.Model
+// Update implements tea.Model.
 func (m *SearchModel) Update(msg tea.Msg) (*SearchModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -113,10 +113,11 @@ func (m *SearchModel) Update(msg tea.Msg) (*SearchModel, tea.Cmd) {
 			}
 		}
 	}
+
 	return m, nil
 }
 
-// View implements tea.Model
+// View implements tea.Model.
 func (m *SearchModel) View() string {
 	var b strings.Builder
 
@@ -125,6 +126,7 @@ func (m *SearchModel) View() string {
 	if m.dbName != "" {
 		titleText += " - " + m.dbName
 	}
+
 	b.WriteString(style.ViewTitle.Render(titleText) + "\n\n")
 
 	// Always reserve space for status message to prevent layout shift
@@ -138,6 +140,7 @@ func (m *SearchModel) View() string {
 
 	// Results
 	maxResults := 10
+
 	if len(m.entries) == 0 {
 		b.WriteString("No entries in database.\n")
 		b.WriteString("Make sure the database was unlocked successfully.\n")
@@ -179,6 +182,7 @@ func (m *SearchModel) View() string {
 				if m.cursor == i {
 					titleStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#7D56F4"))
 					line = fmt.Sprintf("  %s %s", cursor, titleStyle.Render(title))
+
 					if entry.Group != "" {
 						groupStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#9B9B9B"))
 						line += " " + groupStyle.Render(fmt.Sprintf("(%s)", entry.Group))
@@ -201,11 +205,12 @@ func (m *SearchModel) View() string {
 	return b.String()
 }
 
-// search performs fuzzy search on entries
+// search performs fuzzy search on entries.
 func (m *SearchModel) search() {
 	if m.searchInput == "" {
 		m.filteredItems = []fuzzy.Match{}
 		m.cursor = 0
+
 		return
 	}
 

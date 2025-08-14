@@ -24,6 +24,7 @@ func NewKeyring() (keyringSecretStore, error) {
 		KeychainTrustApplication: true,
 	}
 	ring, err := keyring.Open(config)
+
 	return keyringSecretStore{ring: ring}, err
 }
 
@@ -40,6 +41,7 @@ func (k keyringSecretStore) Store(key string, secret []byte) error {
 		KeychainNotTrustApplication: false,
 		KeychainNotSynchronizable:   false,
 	}
+
 	return k.ring.Set(item)
 }
 
@@ -48,6 +50,7 @@ func (k keyringSecretStore) Get(key string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return item.Data, nil
 }
 

@@ -14,7 +14,7 @@ import (
 	"github.com/martinlehoux/kagapass/internal/types"
 )
 
-// Screen represents the current screen being displayed
+// Screen represents the current screen being displayed.
 type Screen int
 
 const (
@@ -24,7 +24,7 @@ const (
 	EntryDetailsScreen
 )
 
-// AppModel is the main application model
+// AppModel is the main application model.
 type AppModel struct {
 	screen    Screen
 	config    types.Config
@@ -46,7 +46,7 @@ type AppModel struct {
 	detailsModel  *DetailsModel
 }
 
-// NewAppModel creates a new application model
+// NewAppModel creates a new application model.
 func NewAppModel() (*AppModel, error) {
 	configMgr, err := config.New()
 	if err != nil {
@@ -67,6 +67,7 @@ func NewAppModel() (*AppModel, error) {
 	keepassLoader := keepass.NewLoader(os.DirFS("/home/kagamino"))
 	secretStore, err := secretstore.NewKeyring()
 	kcore.Expect(err, "error initializing keyring")
+
 	clipboard := clipboard.New()
 	unlockDatabase := &UnlockDatabase{
 		keepassLoader: keepassLoader,
@@ -90,7 +91,7 @@ func NewAppModel() (*AppModel, error) {
 	return app, nil
 }
 
-// Init implements tea.Model
+// Init implements tea.Model.
 func (m *AppModel) Init() tea.Cmd {
 	// Check if we should automatically try to unlock the last used database
 	if m.databases.LastUsed != "" {
@@ -102,10 +103,11 @@ func (m *AppModel) Init() tea.Cmd {
 			}
 		}
 	}
+
 	return nil
 }
 
-// Update implements tea.Model
+// Update implements tea.Model.
 func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -124,14 +126,18 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				log.Printf("failed to save database list: %v", err)
 			}
 		}
+
 		return m, nil
 	case DatabaseUnlocked:
 		m.switchMainSearchScreen(msg.Database, msg.Entries)
+
 		return m, nil
 	case DatabaseUnlockFailed:
 		if m.screen == PasswordInputScreen {
 			var cmd tea.Cmd
+
 			m.passwordModel, cmd = m.passwordModel.Update(msg)
+
 			return m, cmd
 		} else {
 			m.switchPasswordInputScreen(msg.Database)
@@ -139,34 +145,36 @@ func (m *AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Delegate to current screen
+	var cmd tea.Cmd
+
 	switch m.screen {
 	case FileSelectionScreen:
-		var cmd tea.Cmd
 		m.fileSelector, cmd = m.fileSelector.Update(msg)
+
 		return m, cmd
 	case PasswordInputScreen:
-		var cmd tea.Cmd
 		m.passwordModel, cmd = m.passwordModel.Update(msg)
+
 		return m, cmd
 	case MainSearchScreen:
-		var cmd tea.Cmd
 		m.searchModel, cmd = m.searchModel.Update(msg)
+
 		return m, cmd
 	case EntryDetailsScreen:
-		var cmd tea.Cmd
 		m.detailsModel, cmd = m.detailsModel.Update(msg)
+
 		return m, cmd
 	}
 
 	return m, nil
 }
 
-// View implements tea.Model
+// View implements tea.Model.
 func (m *AppModel) View() string {
 	return lipgloss.NewStyle().Padding(1, 2).Render(m.chooseView())
 }
 
-// View implements tea.Model
+// View implements tea.Model.
 func (m *AppModel) chooseView() string {
 	switch m.screen {
 	case FileSelectionScreen:
@@ -178,24 +186,29 @@ func (m *AppModel) chooseView() string {
 	case EntryDetailsScreen:
 		return m.detailsModel.View()
 	}
+
 	return "Loading..."
 }
 
-// handleEscape handles the escape key based on current screen
+// handleEscape handles the escape key based on current screen.
 func (m *AppModel) handleEscape() (*AppModel, tea.Cmd) {
 	switch m.screen {
 	case FileSelectionScreen:
 		return m, tea.Quit
 	case PasswordInputScreen:
 		m.screen = FileSelectionScreen
+
 		return m, nil
 	case MainSearchScreen:
 		m.screen = FileSelectionScreen
+
 		return m, nil
 	case EntryDetailsScreen:
 		m.screen = MainSearchScreen
+
 		return m, nil
 	}
+
 	return m, nil
 }
 
@@ -219,6 +232,7 @@ func (m *AppModel) switchMainSearchScreen(database types.Database, entries []typ
 		if err != nil {
 			log.Printf("failed to save database list: %v", err)
 		}
+
 		return UpdateDatabaseListMsg{DatabaseList: m.databases}
 	}
 }

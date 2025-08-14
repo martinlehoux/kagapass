@@ -8,14 +8,14 @@ import (
 	"github.com/martinlehoux/kagapass/internal/types"
 )
 
-// Manager handles configuration loading and saving
+// Manager handles configuration loading and saving.
 type Manager struct {
 	configDir    string
 	configPath   string
 	databasePath string
 }
 
-// New creates a new configuration manager
+// New creates a new configuration manager.
 func New() (*Manager, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -34,7 +34,7 @@ func New() (*Manager, error) {
 	}, nil
 }
 
-// LoadConfig loads the application configuration
+// LoadConfig loads the application configuration.
 func (m *Manager) LoadConfig() (types.Config, error) {
 	config := types.DefaultConfig()
 
@@ -55,7 +55,7 @@ func (m *Manager) LoadConfig() (types.Config, error) {
 	return config, nil
 }
 
-// SaveConfig saves the application configuration
+// SaveConfig saves the application configuration.
 func (m *Manager) SaveConfig(config types.Config) error {
 	data, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
@@ -65,7 +65,7 @@ func (m *Manager) SaveConfig(config types.Config) error {
 	return os.WriteFile(m.configPath, data, 0o600)
 }
 
-// LoadDatabaseList loads the list of configured databases
+// LoadDatabaseList loads the list of configured databases.
 func (m *Manager) LoadDatabaseList() (types.DatabaseList, error) {
 	dbList := types.DatabaseList{
 		Databases: []types.Database{},
@@ -89,7 +89,7 @@ func (m *Manager) LoadDatabaseList() (types.DatabaseList, error) {
 	return dbList, nil
 }
 
-// SaveDatabaseList saves the list of configured databases
+// SaveDatabaseList saves the list of configured databases.
 func (m *Manager) SaveDatabaseList(dbList types.DatabaseList) error {
 	data, err := json.MarshalIndent(dbList, "", "  ")
 	if err != nil {

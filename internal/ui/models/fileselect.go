@@ -14,7 +14,7 @@ import (
 	"github.com/martinlehoux/kagapass/internal/ui/style"
 )
 
-// FileSelectModel handles the file selection screen
+// FileSelectModel handles the file selection screen.
 type FileSelectModel struct {
 	// Commands
 	unlockDatabase *UnlockDatabase
@@ -39,9 +39,10 @@ func (m *FileSelectModel) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-// Update implements tea.Model
+// Update implements tea.Model.
 func (m *FileSelectModel) Update(msg tea.Msg) (*FileSelectModel, tea.Cmd) {
 	var cmd tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		// Handle input mode first - takes priority over navigation
@@ -55,6 +56,7 @@ func (m *FileSelectModel) Update(msg tea.Msg) (*FileSelectModel, tea.Cmd) {
 				return m.addDatabase()
 			default:
 				m.databaseInput, cmd = m.databaseInput.Update(msg)
+
 				return m, cmd
 			}
 		} else {
@@ -73,6 +75,7 @@ func (m *FileSelectModel) Update(msg tea.Msg) (*FileSelectModel, tea.Cmd) {
 				m.status = status.Status{}
 			case "d":
 				m, cmd = m.removeDatabase()
+
 				return m, cmd
 			case "enter":
 				if len(m.databases.Databases) > 0 && m.cursor < len(m.databases.Databases) {
@@ -83,10 +86,11 @@ func (m *FileSelectModel) Update(msg tea.Msg) (*FileSelectModel, tea.Cmd) {
 			}
 		}
 	}
+
 	return m, nil
 }
 
-// View implements tea.Model
+// View implements tea.Model.
 func (m *FileSelectModel) View() string {
 	var b strings.Builder
 
@@ -99,12 +103,14 @@ func (m *FileSelectModel) View() string {
 		b.WriteString("Enter path to KeePass database (.kdbx file):\n\n")
 		b.WriteString(m.databaseInput.View() + "\n\n")
 		b.WriteString("[Enter] Add  [Esc] Cancel\n")
+
 		return b.String()
 	}
 
 	if len(m.databases.Databases) == 0 {
 		b.WriteString("No KeePass databases configured.\n\n")
 		b.WriteString("Press 'a' to add a database file, 'Esc' to quit.\n")
+
 		return b.String()
 	}
 
@@ -123,12 +129,16 @@ func (m *FileSelectModel) View() string {
 		}
 
 		line := fmt.Sprintf("  %s %s", cursor, name)
+
 		if len(db.Path) > 0 {
 			maxPathLen := 40
+
 			path := db.Path
+
 			if len(path) > maxPathLen {
 				path = "..." + path[len(path)-maxPathLen+3:]
 			}
+
 			line += fmt.Sprintf("  (%s)", path)
 		}
 
@@ -150,13 +160,14 @@ func (m *FileSelectModel) View() string {
 	return b.String()
 }
 
-// addDatabase validates and adds a new database to the list
+// addDatabase validates and adds a new database to the list.
 func (m *FileSelectModel) addDatabase() (*FileSelectModel, tea.Cmd) {
 	path := strings.TrimSpace(m.databaseInput.Value())
 
 	// Validate path
 	if path == "" {
 		m.status = status.Error("Path cannot be empty")
+
 		return m, nil
 	}
 
@@ -164,6 +175,7 @@ func (m *FileSelectModel) addDatabase() (*FileSelectModel, tea.Cmd) {
 	for _, db := range m.databases.Databases {
 		if db.Path == path {
 			m.status = status.Error("Database already in list")
+
 			return m, nil
 		}
 	}
@@ -179,7 +191,7 @@ func (m *FileSelectModel) addDatabase() (*FileSelectModel, tea.Cmd) {
 	m.cursor = len(m.databases.Databases) - 1
 	m.databaseInput.Blur()
 	m.databaseInput.Reset()
-	m.status = status.Success(fmt.Sprintf("Added database: %s", newDB.Name))
+	m.status = status.Success("Added database: " + newDB.Name)
 
 	return m, func() tea.Msg {
 		return UpdateDatabaseListMsg{DatabaseList: m.databases}
@@ -194,14 +206,14 @@ func (m *FileSelectModel) removeDatabase() (*FileSelectModel, tea.Cmd) {
 	deleted := m.databases.Databases[m.cursor]
 	m.databases.Databases = append(m.databases.Databases[:m.cursor], m.databases.Databases[m.cursor+1:]...)
 	m.cursor = max(0, m.cursor-1)
-	m.status = status.Success(fmt.Sprintf("Removed database: %s", deleted.Name))
+	m.status = status.Success("Removed database: " + deleted.Name)
 
 	return m, func() tea.Msg {
 		return UpdateDatabaseListMsg{DatabaseList: m.databases}
 	}
 }
 
-// UpdateDatabaseListMsg is sent when the database list is modified
+// UpdateDatabaseListMsg is sent when the database list is modified.
 type UpdateDatabaseListMsg struct {
 	DatabaseList types.DatabaseList
 }

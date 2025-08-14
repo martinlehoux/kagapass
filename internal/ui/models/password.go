@@ -11,7 +11,7 @@ import (
 	"github.com/martinlehoux/kagapass/internal/ui/style"
 )
 
-// PasswordModel handles the password input screen
+// PasswordModel handles the password input screen.
 type PasswordModel struct {
 	// Commands
 	unlockDatabase *UnlockDatabase
@@ -32,7 +32,7 @@ func NewPasswordModel(unlockDatabase *UnlockDatabase, exit func(), database type
 	}
 }
 
-// Update implements tea.Model
+// Update implements tea.Model.
 func (m *PasswordModel) Update(msg tea.Msg) (*PasswordModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -58,10 +58,11 @@ func (m *PasswordModel) Update(msg tea.Msg) (*PasswordModel, tea.Cmd) {
 	case DatabaseUnlockFailed:
 		log.Printf("Failed to unlock database: %s", msg.Error)
 	}
+
 	return m, nil
 }
 
-// View implements tea.Model
+// View implements tea.Model.
 func (m *PasswordModel) View() string {
 	var b strings.Builder
 
@@ -69,10 +70,12 @@ func (m *PasswordModel) View() string {
 
 	// Database info
 	b.WriteString("Database: " + m.database.Name + "\n")
+
 	if m.database.Path != "" {
 		pathStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#626262"))
 		b.WriteString(pathStyle.Render("Path: "+m.database.Path) + "\n")
 	}
+
 	b.WriteString("\n")
 	b.WriteString(m.status.Render() + "\n\n")
 	// Password input

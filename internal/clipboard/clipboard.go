@@ -8,22 +8,23 @@ import (
 	"github.com/atotto/clipboard"
 )
 
-// Clipboard handles clipboard operations with auto-clearing
+// Clipboard handles clipboard operations with auto-clearing.
 type Clipboard struct {
 	clearTimer *time.Timer
 }
 
-// New creates a new clipboard manager
+// New creates a new clipboard manager.
 func New() *Clipboard {
 	return &Clipboard{
 		clearTimer: nil,
 	}
 }
 
-// Copy copies text to clipboard and sets up auto-clearing
+// Copy copies text to clipboard and sets up auto-clearing.
 func (m *Clipboard) Copy(text string, clearAfter time.Duration) error {
 	// Copy to clipboard
-	if err := clipboard.WriteAll(text); err != nil {
+	err := clipboard.WriteAll(text)
+	if err != nil {
 		return err
 	}
 
@@ -48,9 +49,10 @@ func (m *Clipboard) Copy(text string, clearAfter time.Duration) error {
 	return nil
 }
 
-// CopyWithContext copies text with context cancellation support
+// CopyWithContext copies text with context cancellation support.
 func (m *Clipboard) CopyWithContext(ctx context.Context, text string, clearAfter time.Duration) error {
-	if err := m.Copy(text, clearAfter); err != nil {
+	err := m.Copy(text, clearAfter)
+	if err != nil {
 		return err
 	}
 
@@ -66,6 +68,7 @@ func (m *Clipboard) CopyWithContext(ctx context.Context, text string, clearAfter
 						log.Printf("Failed to clear clipboard: %v", err)
 					}
 				}
+
 				if m.clearTimer != nil {
 					m.clearTimer.Stop()
 				}
@@ -78,21 +81,22 @@ func (m *Clipboard) CopyWithContext(ctx context.Context, text string, clearAfter
 	return nil
 }
 
-// Clear immediately clears the clipboard
+// Clear immediately clears the clipboard.
 func (m *Clipboard) Clear() error {
 	if m.clearTimer != nil {
 		m.clearTimer.Stop()
 		m.clearTimer = nil
 	}
+
 	return clipboard.WriteAll("")
 }
 
-// Get retrieves current clipboard content
+// Get retrieves current clipboard content.
 func (m *Clipboard) Get() (string, error) {
 	return clipboard.ReadAll()
 }
 
-// StopAutoClearing cancels any pending auto-clear timer
+// StopAutoClearing cancels any pending auto-clear timer.
 func (m *Clipboard) StopAutoClearing() {
 	if m.clearTimer != nil {
 		m.clearTimer.Stop()

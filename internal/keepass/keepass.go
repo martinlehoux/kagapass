@@ -24,6 +24,7 @@ func (m *Loader) Load(path string, password []byte) (*KeePass, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	defer func() {
 		err := file.Close()
 		if err != nil {
@@ -33,11 +34,14 @@ func (m *Loader) Load(path string, password []byte) (*KeePass, error) {
 
 	database := gokeepasslib.NewDatabase()
 	database.Credentials = gokeepasslib.NewPasswordCredentials(string(password))
+
 	err = gokeepasslib.NewDecoder(file).Decode(database)
 	if err != nil {
 		return nil, err
 	}
+
 	err = database.UnlockProtectedEntries()
+
 	return &KeePass{
 		database: database,
 	}, err
@@ -107,6 +111,7 @@ func collectEntriesFromGroup(group *gokeepasslib.Group, groupPath string) []type
 		if entry.Times.CreationTime != nil {
 			entryData.Created = entry.Times.CreationTime.Time
 		}
+
 		if entry.Times.LastModificationTime != nil {
 			entryData.Modified = entry.Times.LastModificationTime.Time
 		}
@@ -121,8 +126,10 @@ func collectEntriesFromGroup(group *gokeepasslib.Group, groupPath string) []type
 			if subGroupPath != "" {
 				subGroupPath += "/"
 			}
+
 			subGroupPath += subGroup.Name
 		}
+
 		entries = append(entries, collectEntriesFromGroup(&subGroup, subGroupPath)...)
 	}
 
